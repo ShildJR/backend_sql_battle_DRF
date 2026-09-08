@@ -1,0 +1,1 @@
+# SQL Battle Django Backend
