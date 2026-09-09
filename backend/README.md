@@ -45,8 +45,32 @@ cp .env.example .env
 python manage.py migrate
 python manage.py loaddata api/fixtures/tasks.json  # Загрузить примеры задач
 python manage.py create_admin --username admin --password admin123
+```
+
+### 4. Запуск сервера (ВАЖНО: нужен ASGI для WebSocket!)
+
+**Для разработки** (с автоматической перезагрузкой):
+```bash
+# Вариант 1: Через daphne (рекомендуется)
+daphne -b 0.0.0.0 -p 8000 sql_battle.asgi:application
+
+# Вариант 2: Через uvicorn
+uvicorn sql_battle.asgi:application --host 0.0.0.0 --port 8000 --reload
+
+# Вариант 3: Через Django runserver (только если установлен channels)
 python manage.py runserver 0.0.0.0:8000
 ```
+
+**Для продакшена**:
+```bash
+# HTTP + WebSocket через daphne
+daphne -b 0.0.0.0 -p 8000 sql_battle.asgi:application
+
+# Или через uvicorn + gunicorn
+gunicorn sql_battle.asgi:application -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
+```
+
+⚠️ **Внимание**: Обычный `python manage.py runserver` **НЕ поддерживает WebSocket** без установленного `channels`. Если WebSocket не работает, используйте `daphne` или `uvicorn`.
 
 ## 📁 Структура проекта
 
