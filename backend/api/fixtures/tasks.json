@@ -1,0 +1,166 @@
+[
+  {
+    "model": "api.task",
+    "pk": 1,
+    "fields": {
+      "title": "Найди активных хакеров",
+      "description": "Напишите SQL-запрос, который вернёт список активных пользователей (status = 'active'). Отобразите имя и город пользователя.",
+      "difficulty": "easy",
+      "points": 100,
+      "schema": "CREATE TABLE users (id INT PRIMARY KEY, name VARCHAR(100), city VARCHAR(50), status VARCHAR(20));",
+      "tables": [
+        {
+          "name": "users",
+          "columns": [
+            {"name": "id", "type": "INT"},
+            {"name": "name", "type": "VARCHAR"},
+            {"name": "city", "type": "VARCHAR"},
+            {"name": "status", "type": "VARCHAR"}
+          ],
+          "sampleData": [
+            {"id": 1, "name": "Иван Петров", "city": "Москва", "status": "active"},
+            {"id": 2, "name": "Мария Сидорова", "city": "СПб", "status": "inactive"},
+            {"id": 3, "name": "Алексей Козлов", "city": "Москва", "status": "active"},
+            {"id": 4, "name": "Елена Волкова", "city": "Новосибирск", "status": "active"},
+            {"id": 5, "name": "Дмитрий Морозов", "city": "СПб", "status": "inactive"}
+          ]
+        }
+      ],
+      "expected_result": [
+        {"name": "Иван Петров", "city": "Москва"},
+        {"name": "Алексей Козлов", "city": "Москва"},
+        {"name": "Елена Волкова", "city": "Новосибирск"}
+      ]
+    }
+  },
+  {
+    "model": "api.task",
+    "pk": 2,
+    "fields": {
+      "title": "Подсчёт пользователей по городам",
+      "description": "Напишите SQL-запрос, который подсчитает количество пользователей в каждом городе. Результат должен содержать название города и количество пользователей.",
+      "difficulty": "easy",
+      "points": 150,
+      "schema": "CREATE TABLE users (id INT PRIMARY KEY, name VARCHAR(100), city VARCHAR(50));",
+      "tables": [
+        {
+          "name": "users",
+          "columns": [
+            {"name": "id", "type": "INT"},
+            {"name": "name", "type": "VARCHAR"},
+            {"name": "city", "type": "VARCHAR"}
+          ],
+          "sampleData": [
+            {"id": 1, "name": "Иван Петров", "city": "Москва"},
+            {"id": 2, "name": "Мария Сидорова", "city": "СПб"},
+            {"id": 3, "name": "Алексей Козлов", "city": "Москва"},
+            {"id": 4, "name": "Елена Волкова", "city": "Новосибирск"},
+            {"id": 5, "name": "Дмитрий Морозов", "city": "СПб"},
+            {"id": 6, "name": "Ольга Новикова", "city": "Москва"}
+          ]
+        }
+      ],
+      "expected_result": [
+        {"city": "Москва", "user_count": 3},
+        {"city": "СПб", "user_count": 2},
+        {"city": "Новосибирск", "user_count": 1}
+      ]
+    }
+  },
+  {
+    "model": "api.task",
+    "pk": 3,
+    "fields": {
+      "title": "Анализ заказов клиентов",
+      "description": "Напишите SQL-запрос, который вернёт имя клиента и общую сумму его заказов. Включите только клиентов с суммой заказов больше 1000.",
+      "difficulty": "medium",
+      "points": 300,
+      "schema": "CREATE TABLE clients (id INT PRIMARY KEY, name VARCHAR(100)); CREATE TABLE orders (id INT PRIMARY KEY, client_id INT, amount INT);",
+      "tables": [
+        {
+          "name": "clients",
+          "columns": [
+            {"name": "id", "type": "INT"},
+            {"name": "name", "type": "VARCHAR"}
+          ],
+          "sampleData": [
+            {"id": 1, "name": "ООО Ромашка"},
+            {"id": 2, "name": "ИП Иванов"},
+            {"id": 3, "name": "АО Звезда"}
+          ]
+        },
+        {
+          "name": "orders",
+          "columns": [
+            {"name": "id", "type": "INT"},
+            {"name": "client_id", "type": "INT"},
+            {"name": "amount", "type": "INT"}
+          ],
+          "sampleData": [
+            {"id": 1, "client_id": 1, "amount": 500},
+            {"id": 2, "client_id": 1, "amount": 800},
+            {"id": 3, "client_id": 2, "amount": 200},
+            {"id": 4, "client_id": 2, "amount": 300},
+            {"id": 5, "client_id": 3, "amount": 1500}
+          ]
+        }
+      ],
+      "expected_result": [
+        {"name": "ООО Ромашка", "total_amount": 1300},
+        {"name": "АО Звезда", "total_amount": 1500}
+      ]
+    }
+  },
+  {
+    "model": "api.task",
+    "pk": 4,
+    "fields": {
+      "title": "Топ-3 сотрудника по продажам",
+      "description": "Напишите SQL-запрос, который вернёт топ-3 сотрудников по общей сумме продаж. Результат должен содержать имя сотрудника и сумму продаж, отсортированные по убыванию.",
+      "difficulty": "hard",
+      "points": 500,
+      "schema": "CREATE TABLE employees (id INT PRIMARY KEY, name VARCHAR(100), department VARCHAR(50)); CREATE TABLE sales (id INT PRIMARY KEY, employee_id INT, amount INT, sale_date VARCHAR(20));",
+      "tables": [
+        {
+          "name": "employees",
+          "columns": [
+            {"name": "id", "type": "INT"},
+            {"name": "name", "type": "VARCHAR"},
+            {"name": "department", "type": "VARCHAR"}
+          ],
+          "sampleData": [
+            {"id": 1, "name": "Анна Белова", "department": "Продажи"},
+            {"id": 2, "name": "Борис Краснов", "department": "Продажи"},
+            {"id": 3, "name": "Виктор Зелёнов", "department": "Продажи"},
+            {"id": 4, "name": "Галина Синева", "department": "Продажи"},
+            {"id": 5, "name": "Денис Чёрный", "department": "Продажи"}
+          ]
+        },
+        {
+          "name": "sales",
+          "columns": [
+            {"name": "id", "type": "INT"},
+            {"name": "employee_id", "type": "INT"},
+            {"name": "amount", "type": "INT"},
+            {"name": "sale_date", "type": "VARCHAR"}
+          ],
+          "sampleData": [
+            {"id": 1, "employee_id": 1, "amount": 5000, "sale_date": "2024-01-15"},
+            {"id": 2, "employee_id": 1, "amount": 3000, "sale_date": "2024-01-20"},
+            {"id": 3, "employee_id": 2, "amount": 7000, "sale_date": "2024-01-10"},
+            {"id": 4, "employee_id": 3, "amount": 2000, "sale_date": "2024-01-12"},
+            {"id": 5, "employee_id": 4, "amount": 9000, "sale_date": "2024-01-18"},
+            {"id": 6, "employee_id": 5, "amount": 4000, "sale_date": "2024-01-25"},
+            {"id": 7, "employee_id": 2, "amount": 1000, "sale_date": "2024-01-28"},
+            {"id": 8, "employee_id": 4, "amount": 2000, "sale_date": "2024-01-30"}
+          ]
+        }
+      ],
+      "expected_result": [
+        {"name": "Галина Синева", "total_sales": 11000},
+        {"name": "Борис Краснов", "total_sales": 8000},
+        {"name": "Анна Белова", "total_sales": 8000}
+      ]
+    }
+  }
+]
