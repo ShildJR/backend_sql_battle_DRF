@@ -2,6 +2,7 @@ import json
 from channels.generic.websocket import AsyncWebSocketConsumer
 from channels.db import database_sync_to_async
 from django.db.models import Avg, Q
+from django.contrib.auth.models import AnonymousUser
 
 
 class LeaderboardConsumer(AsyncWebSocketConsumer):
@@ -9,6 +10,9 @@ class LeaderboardConsumer(AsyncWebSocketConsumer):
 
     async def connect(self):
         """Подключение клиента"""
+        # Получаем пользователя из scope (установлен middleware)
+        self.user = self.scope.get('user', AnonymousUser())
+
         self.group_name = 'leaderboard'
         await self.channel_layer.group_add(
             self.group_name,
