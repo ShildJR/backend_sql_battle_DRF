@@ -5,7 +5,7 @@ from django.db.models import Avg, Q
 
 
 class LeaderboardConsumer(AsyncWebSocketConsumer):
-    """WebSocket consumer для реалтайм-обновлений лидерборда"""
+    """WebSocket consumer для реалтайм-обновлений лидерборда (camelCase)"""
 
     async def connect(self):
         """Подключение клиента"""
@@ -43,7 +43,7 @@ class LeaderboardConsumer(AsyncWebSocketConsumer):
 
     @database_sync_to_async
     def get_leaderboard(self):
-        """Получает данные лидерборда из БД"""
+        """Получает данные лидерборда из БД — camelCase для совместимости с фронтендом"""
         from .models import User, Submission
 
         users = User.objects.filter(
@@ -63,12 +63,13 @@ class LeaderboardConsumer(AsyncWebSocketConsumer):
             avg_time_seconds = round((avg_time or 0) / 1000, 2)
             avatar = user.username[:2].upper() if user.username else '??'
 
+            # camelCase для совместимости с фронтендом
             result.append({
                 'rank': rank,
                 'username': user.username,
-                'total_points': user.total_points,
-                'solved_tasks': solved_count,
-                'avg_time': avg_time_seconds,
+                'totalPoints': user.total_points,
+                'solvedTasks': solved_count,
+                'avgTime': avg_time_seconds,
                 'avatar': avatar
             })
 

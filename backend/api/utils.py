@@ -1,158 +1,152 @@
 import sqlite3
 import tempfile
-import time
-import json
 import os
-from typing import Tuple, Optional, Any
+import re
+from typing import Tuple, List, Dict, Any
 
 
-FORBIDDEN_KEYWORDS = ['INSERT', 'UPDATE', 'DELETE', 'DROP', 'ALTER', 'TRUNCATE', 'CREATE', 'GRANT', 'REVOKE']
+# Запрещённые ключевые слова (только SELECT разрешён)
+FORBIDDEN_KEYWORDS = ['INSERT', 'UPDATE', 'DELETE', 'DROP', 'ALTER', 'TRUNCATE', 'CREATE', 'EXEC', 'GRANT', 'REVOKE']
 
 
-def validate_query(query: str) -> Tuple[bool, Optional[str]]:
-    """Проверяет SQL-запрос на запрещённые операции"""
+def validate_query(query: str) -> bool:
+    """Проверяет, что запрос безопасен (только SELECT)"""
     query_upper = query.upper().strip()
+
+    # Пустой запрос
+    if not query_upper:
+        return False
 
     # Проверяем запрещённые ключевые слова
     for keyword in FORBIDDEN_KEYWORDS:
-        if keyword in query_upper:
-            return False, f"Запрещённая операция: {keyword}. Разрешены только SELECT-запросы."
+        # Используем word boundary чтобы не ловить подстроки
+        pattern = r'\b' + keyword + r'\b'
+        if re.search(pattern, query_upper):
+            return False
 
-    # Проверяем что запрос начинается с SELECT или WITH (для CTE)
-    first_word = query_upper.split()[0] if query_upper.split() else ''
-    if first_word not in ('SELECT', 'WITH', 'PRAGMA'):
-        return False, "Разрешены только SELECT-запросы"
-
-    return True, None
+    return True
 
 
-def execute_sql_in_sandbox(
+def execute_sql_sandbox(
     query: str,
     schema: str,
-    tables_data: list,
-    timeout_seconds: int = 3
-) -> dict:
+    tables_data: List[Dict[str, Any]]
+) -> Tuple[bool, Any]:
     """
     Выполняет SQL-запрос в изолированной среде (sandbox).
-    
+
     Args:
         query: SQL-запрос пользователя
         schema: DDL для создания таблиц
-        tables_data: Данные таблиц в формате [{"name": "...", "columns": [...], "sampleData": [...]}]
-        timeout_seconds: Таймаут выполнения в секундах
-    
-    Returns:
-        dict с результатом выполнения
-    """
-    # Валидация запроса
-    is_valid, error_msg = validate_query(query)
-    if not is_valid:
-        return {
-            'status': 'error',
-            'message': error_msg
-        }
+        tables_data: Данные таблиц с примерами
 
-    # Создаём временную БД
-    tmp_fd, tmp_path = tempfile.mkstemp(suffix='.db')
-    os.close(tmp_fd)
+    Returns:
+        Tuple[bool, Any]: (успех, результат или сообщение об ошибке)
+        Если успех=True: результат — список словарей
+        Если успех=False: результат — строка с ошибкой
+    """
+    tmp_file = None
+    conn = None
 
     try:
-        conn = sqlite3.connect(tmp_path)
-        conn.execute(f"PRAGMA busy_timeout = {timeout_seconds * 1000}")
+        # Создаём временную БД
+        tmp_file = tempfile.NamedTemporaryFile(suffix='.db', delete=False)
+        tmp_file.close()
+
+        conn = sqlite3.connect(tmp_file.name)
+        conn.row_factory = sqlite3.Row
 
         # Создаём схему
         try:
             conn.executescript(schema)
         except sqlite3.Error as e:
-            conn.close()
-            return {
-                'status': 'error',
-                'message': f"Ошибка создания схемы: {str(e)}"
-            }
+            return False, f"Ошибка создания схемы: {str(e)}"
 
         # Загружаем тестовые данные
-        try:
-            for table_data in tables_data:
-                table_name = table_data['name']
-                columns = table_data.get('columns', [])
-                sample_data = table_data.get('sampleData', [])
+        for table_info in tables_data:
+            table_name = table_info.get('name', '')
+            columns = table_info.get('columns', [])
+            sample_data = table_info.get('sampleData', [])
 
-                if sample_data and columns:
-                    col_names = [col['name'] for col in columns]
-                    placeholders = ', '.join(['?' for _ in col_names])
-                    insert_sql = f"INSERT INTO {table_name} ({', '.join(col_names)}) VALUES ({placeholders})"
+            if not table_name or not columns:
+                continue
 
-                    for row in sample_data:
-                        values = [row.get(col['name']) for col in columns]
-                        conn.execute(insert_sql, values)
+            col_names = [col['name'] for col in columns]
 
-            conn.commit()
-        except (sqlite3.Error, KeyError) as e:
-            conn.close()
-            return {
-                'status': 'error',
-                'message': f"Ошибка загрузки данных: {str(e)}"
-            }
+            for row in sample_data:
+                values = []
+                placeholders = []
+                for col_name in col_names:
+                    val = row.get(col_name)
+                    values.append(val)
+                    placeholders.append('?')
 
-        # Выполняем запрос с замером времени
-        start_time = time.time()
+                try:
+                    insert_sql = f"INSERT INTO {table_name} ({', '.join(col_names)}) VALUES ({', '.join(placeholders)})"
+                    conn.execute(insert_sql, values)
+                except sqlite3.Error as e:
+                    return False, f"Ошибка загрузки данных в {table_name}: {str(e)}"
+
+        conn.commit()
+
+        # Выполняем запрос пользователя с таймаутом
+        conn.execute("PRAGMA busy_timeout = 3000")  # 3 секунды
+
         try:
             cursor = conn.execute(query)
-            columns = [description[0] for description in cursor.description] if cursor.description else []
-            rows = cursor.fetchmany(1000)  # Ограничение на количество строк
-            execution_time = time.time() - start_time
+            rows = cursor.fetchall()
 
-            # Формируем результат
-            result_data = []
-            for row in rows:
-                row_dict = {}
-                for i, col in enumerate(columns):
-                    row_dict[col] = row[i]
-                result_data.append(row_dict)
+            # Преобразуем в список словарей
+            if rows:
+                col_names = [description[0] for description in cursor.description]
+                result = []
+                for row in rows:
+                    row_dict = {}
+                    for i, col_name in enumerate(col_names):
+                        row_dict[col_name] = row[i]
+                    result.append(row_dict)
+            else:
+                result = []
 
-            conn.close()
-            return {
-                'status': 'success',
-                'data': result_data,
-                'execution_time': round(execution_time, 3)
-            }
+            return True, result
 
         except sqlite3.Error as e:
-            execution_time = time.time() - start_time
-            conn.close()
-            return {
-                'status': 'error',
-                'message': str(e),
-                'execution_time': round(execution_time, 3)
-            }
+            return False, f"ERROR: {str(e)}"
 
     except Exception as e:
-        return {
-            'status': 'error',
-            'message': f"Внутренняя ошибка: {str(e)}"
-        }
+        return False, f"Внутренняя ошибка: {str(e)}"
+
     finally:
-        # Удаляем временный файл
-        try:
-            os.unlink(tmp_path)
-        except OSError:
-            pass
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
+        if tmp_file and os.path.exists(tmp_file.name):
+            try:
+                os.unlink(tmp_file.name)
+            except Exception:
+                pass
 
 
-def compare_results(user_result: list, expected_result: list) -> bool:
+def compare_results(user_result: List[Dict], expected_result: List[Dict]) -> bool:
     """
     Сравнивает результат пользователя с эталонным.
-    
-    Правила сравнения:
+
+    Правила:
     - Количество строк должно совпадать
+    - Названия колонок могут отличаться (алиасы)
     - Порядок строк не важен
-    - Значения должны совпадать с точностью до типов данных
+    - Значения должны совпадать с точностью до типов
     """
+    if not user_result and not expected_result:
+        return True
+
     if len(user_result) != len(expected_result):
         return False
 
-    if len(user_result) == 0 and len(expected_result) == 0:
-        return True
+    if not user_result or not expected_result:
+        return False
 
     # Нормализуем значения для сравнения
     def normalize_value(val):
@@ -160,15 +154,15 @@ def compare_results(user_result: list, expected_result: list) -> bool:
             return None
         if isinstance(val, float):
             return round(val, 6)
-        if isinstance(val, int):
-            return val
-        return str(val).strip().lower()
+        if isinstance(val, str):
+            return val.strip()
+        return val
 
     def normalize_row(row):
         return tuple(sorted(normalize_value(v) for v in row.values()))
 
-    # Сортируем оба набора для сравнения
-    user_normalized = sorted(normalize_row(row) for row in user_result)
-    expected_normalized = sorted(normalize_row(row) for row in expected_result)
+    # Сортируем строки для сравнения (порядок не важен)
+    user_sorted = sorted(normalize_row(row) for row in user_result)
+    expected_sorted = sorted(normalize_row(row) for row in expected_result)
 
-    return user_normalized == expected_normalized
+    return user_sorted == expected_sorted

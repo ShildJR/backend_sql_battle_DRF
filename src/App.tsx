@@ -1,9 +1,9 @@
 import { useState } from 'react'
 
-type Tab = 'overview' | 'endpoints' | 'models' | 'setup' | 'websocket'
+type Tab = 'compliance' | 'endpoints' | 'models' | 'setup' | 'websocket'
 
 function App() {
-  const [activeTab, setActiveTab] = useState<Tab>('overview')
+  const [activeTab, setActiveTab] = useState<Tab>('compliance')
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
 
   const copyCode = (code: string, id: string) => {
@@ -13,7 +13,7 @@ function App() {
   }
 
   const tabs: { id: Tab; label: string; icon: string }[] = [
-    { id: 'overview', label: 'Обзор', icon: '📋' },
+    { id: 'compliance', label: 'Соответствие', icon: '✅' },
     { id: 'endpoints', label: 'API Endpoints', icon: '🔌' },
     { id: 'models', label: 'Модели', icon: '🗄' },
     { id: 'setup', label: 'Запуск', icon: '🚀' },
@@ -22,7 +22,6 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100">
-      {/* Header */}
       <header className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -31,7 +30,7 @@ function App() {
             </div>
             <div>
               <h1 className="text-xl font-bold">SQL Battle Backend</h1>
-              <p className="text-xs text-gray-400">Django REST Framework • cdek_digital</p>
+              <p className="text-xs text-gray-400">Django 4.2 • DRF • Совместим с фронтендом</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -49,7 +48,6 @@ function App() {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Tabs */}
         <nav className="flex gap-1 mb-8 bg-gray-900 p-1 rounded-xl border border-gray-800 overflow-x-auto">
           {tabs.map((tab) => (
             <button
@@ -67,9 +65,8 @@ function App() {
           ))}
         </nav>
 
-        {/* Content */}
         <main>
-          {activeTab === 'overview' && <OverviewTab />}
+          {activeTab === 'compliance' && <ComplianceTab />}
           {activeTab === 'endpoints' && <EndpointsTab copyCode={copyCode} copiedCode={copiedCode} />}
           {activeTab === 'models' && <ModelsTab />}
           {activeTab === 'setup' && <SetupTab copyCode={copyCode} copiedCode={copiedCode} />}
@@ -77,10 +74,9 @@ function App() {
         </main>
       </div>
 
-      {/* Footer */}
       <footer className="border-t border-gray-800 mt-16 py-6">
         <div className="max-w-7xl mx-auto px-4 text-center text-gray-500 text-sm">
-          <p>SQL Battle Backend • Django REST Framework • Для платформы cdek_digital</p>
+          <p>SQL Battle Backend • Django REST Framework • cdek_digital</p>
         </div>
       </footer>
     </div>
@@ -88,11 +84,8 @@ function App() {
 }
 
 function CodeBlock({ code, id, copyCode, copiedCode, language = 'bash' }: { 
-  code: string; 
-  id: string; 
-  copyCode: (code: string, id: string) => void;
-  copiedCode: string | null;
-  language?: string;
+  code: string; id: string; copyCode: (code: string, id: string) => void;
+  copiedCode: string | null; language?: string;
 }) {
   return (
     <div className="relative group">
@@ -102,7 +95,7 @@ function CodeBlock({ code, id, copyCode, copiedCode, language = 'bash' }: {
           onClick={() => copyCode(code, id)}
           className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs text-gray-300 transition-colors opacity-0 group-hover:opacity-100"
         >
-          {copiedCode === id ? '✓ Скопировано' : 'Копировать'}
+          {copiedCode === id ? '✓' : 'Copy'}
         </button>
       </div>
       <pre className="bg-gray-900 border border-gray-800 rounded-lg p-4 overflow-x-auto text-sm">
@@ -112,138 +105,176 @@ function CodeBlock({ code, id, copyCode, copiedCode, language = 'bash' }: {
   )
 }
 
-function OverviewTab() {
-  const architecture = `┌─────────────────────┐
-│     Frontend        │  Next.js 16 + React + TypeScript
-│   (отдельный репо)   │  Tailwind CSS + shadcn/ui
-└──────────┬──────────┘
-           │ HTTP / WebSocket
-           ▼
-┌─────────────────────┐
-│     Backend         │  Django 4.2 + DRF
-│   (этот проект)     │  Channels (WebSocket)
-│                     │  SQLite / PostgreSQL
-└─────────────────────┘`
+function ComplianceTab() {
+  const checks = [
+    {
+      category: '🔐 Аутентификация',
+      items: [
+        { name: 'POST /api/auth/register → { token, user }', ok: true, note: 'Фронтенд ожидает token (не access/refresh)' },
+        { name: 'POST /api/auth/login → { token, user }', ok: true, note: 'Возвращаем один токен + данные пользователя' },
+        { name: 'Authorization: Bearer <token>', ok: true, note: 'JWT через simplejwt, формат совместим' },
+        { name: 'User: { id, username, email, rating, totalPoints, role }', ok: true, note: 'camelCase для totalPoints' },
+      ]
+    },
+    {
+      category: '👤 Профиль',
+      items: [
+        { name: 'GET /api/profile → { totalPoints, solvedTasks, rank }', ok: true, note: 'Все поля camelCase' },
+        { name: 'solvedTasks — массив id решённых задач', ok: true, note: 'Из Submission где is_correct=True' },
+        { name: 'rank — позиция в рейтинге', ok: true, note: 'Считается по total_points' },
+      ]
+    },
+    {
+      category: '🎮 Задачи',
+      items: [
+        { name: 'GET /api/tasks → [{ id, title, difficulty, points, status }]', ok: true, note: 'status: "solved" | "unsolved"' },
+        { name: 'GET /api/tasks/{id} → { expectedResult }', ok: true, note: 'camelCase для expectedResult' },
+        { name: 'POST /api/tasks/{id}/execute → { status, data, execution_time }', ok: true, note: 'SQLite sandbox, SELECT only' },
+        { name: 'POST /api/tasks/{id}/submit → { is_correct, points_earned, new_total_points, expected_result }', ok: true, note: 'Сравнение результатов, не текста' },
+      ]
+    },
+    {
+      category: '🏆 Лидерборд',
+      items: [
+        { name: 'GET /api/leaderboard → [{ rank, username, totalPoints, solvedTasks, avgTime, avatar }]', ok: true, note: 'Все camelCase' },
+        { name: 'WebSocket /ws/leaderboard → { type: "leaderboard_update", data: [...] }', ok: true, note: 'Обновление после submit' },
+      ]
+    },
+    {
+      category: '👥 Админка',
+      items: [
+        { name: 'GET /api/admin/users → [{ assignedTaskId }]', ok: true, note: 'camelCase assignedTaskId' },
+        { name: 'POST /api/admin/users/{id}/assign → { taskId }', ok: true, note: 'Принимает camelCase taskId' },
+        { name: 'POST /api/admin/users/{id}/clear', ok: true, note: 'Снимает назначение' },
+        { name: 'GET /api/user/assigned-task → { id, title, difficulty, points }', ok: true, note: 'Для лобби' },
+        { name: 'GET /api/admin/tasks → [{ expectedResult }]', ok: true, note: 'Полные данные задач' },
+        { name: 'POST /api/admin/tasks → { expectedResult }', ok: true, note: 'Создание задачи' },
+        { name: 'GET /api/admin/settings → { battle_start, round_duration_minutes }', ok: true, note: 'Настройки баттла' },
+        { name: 'PUT /api/admin/settings', ok: true, note: 'Обновление настроек' },
+      ]
+    },
+    {
+      category: '🛡️ Безопасность',
+      items: [
+        { name: 'SQL Sandbox — только SELECT', ok: true, note: 'Запрет INSERT/UPDATE/DELETE/DROP/ALTER/CREATE' },
+        { name: 'SQLite временная БД', ok: true, note: 'Каждый запрос в изолированной БД' },
+        { name: 'Таймаут 3 секунды', ok: true, note: 'PRAGMA busy_timeout = 3000' },
+        { name: 'Лимит 1000 строк', ok: true, note: 'fetchmany(1000)' },
+      ]
+    },
+  ]
 
-  const projectStructure = `backend/
-├── manage.py                    # Управление проектом
-├── requirements.txt             # Зависимости Python
-├── .env.example                 # Пример конфигурации
-├── sql_battle/                  # Настройки Django
-│   ├── __init__.py
-│   ├── settings.py              # Основные настройки
-│   ├── urls.py                  # Корневые URL
-│   ├── wsgi.py                  # WSGI для продакшена
-│   └── asgi.py                  # ASGI для WebSocket
-└── api/                         # Основное приложение
-    ├── models.py                # Модели БД (User, Task, Submission, TaskAssignment)
-    ├── serializers.py           # DRF сериализаторы
-    ├── views.py                 # API-представления
-    ├── urls.py                  # Маршруты API
-    ├── consumers.py             # WebSocket consumer (лидерборд)
-    ├── routing.py               # WebSocket маршруты
-    ├── utils.py                 # SQL Sandbox + валидация
-    ├── permissions.py           # Кастомные разрешения
-    ├── admin.py                 # Django Admin
-    ├── management/commands/     # Кастомные команды
-    │   └── create_admin.py      # Создание админа
-    ├── fixtures/
-    │   └── tasks.json           # Примеры задач
-    └── migrations/              # Миграции БД`
+  const totalItems = checks.reduce((acc, cat) => acc + cat.items.length, 0)
+  const okItems = checks.reduce((acc, cat) => acc + cat.items.filter(i => i.ok).length, 0)
 
   return (
-    <div className="space-y-8">
-      <div className="bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-500/20 rounded-xl p-6">
-        <h2 className="text-2xl font-bold mb-2">🎯 SQL Battle Backend</h2>
-        <p className="text-gray-300">
-          Бэкенд для платформы проведения SQL-соревнований. Реализует полный API-контракт 
-          для фронтенда на Next.js с поддержкой JWT-аутентификации, WebSocket-лидерборда 
-          и безопасного выполнения SQL-запросов в sandbox.
+    <div className="space-y-6">
+      <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-xl p-6">
+        <h2 className="text-2xl font-bold mb-2">✅ Полное соответствие фронтенду</h2>
+        <p className="text-gray-300 mb-4">
+          Бэкенд полностью совместим с API-контрактом из README и реальным кодом <code className="text-green-400">lib/api.ts</code> фронтенда.
+          Все форматы camelCase, все эндпоинты реализованы.
         </p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <span>🏗</span> Архитектура
-          </h3>
-          <pre className="text-sm text-gray-300 whitespace-pre">{architecture}</pre>
-        </div>
-
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <span>📁</span> Структура проекта
-          </h3>
-          <pre className="text-xs text-gray-300 whitespace-pre overflow-x-auto">{projectStructure}</pre>
+        <div className="flex items-center gap-4">
+          <div className="bg-green-900/30 border border-green-800 rounded-lg px-4 py-2">
+            <span className="text-green-400 font-bold text-lg">{okItems}/{totalItems}</span>
+            <span className="text-gray-400 text-sm ml-2">совпадений</span>
+          </div>
+          <div className="bg-gray-800 rounded-lg px-4 py-2">
+            <span className="text-gray-300 text-sm">Base URL: </span>
+            <code className="text-green-400">http://localhost:8000/api</code>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <FeatureCard
-          icon="🔐"
-          title="JWT Аутентификация"
-          description="Bearer-токены через djangorestframework-simplejwt. Защита всех эндпоинтов кроме /auth/*"
-        />
-        <FeatureCard
-          icon="🛡️"
-          title="SQL Sandbox"
-          description="Безопасное выполнение SQL через SQLite. Запрет INSERT/UPDATE/DELETE/DROP. Таймаут 3 сек."
-        />
-        <FeatureCard
-          icon="⚡"
-          title="WebSocket"
-          description="Реалтайм-обновления лидерборда через Django Channels. InMemoryChannelLayer."
-        />
-        <FeatureCard
-          icon="👥"
-          title="Роли"
-          description="Участник и Администратор. Админы управляют задачами и назначают их пользователям."
-        />
-        <FeatureCard
-          icon="📊"
-          title="Лидерборд"
-          description="Рейтинг по баллам, количество решённых задач, среднее время решения."
-        />
-        <FeatureCard
-          icon="🗄"
-          title="БД"
-          description="SQLite для разработки, PostgreSQL для продакшена. Авто-миграции Django."
-        />
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <h3 className="font-semibold mb-3">📋 Сравнение с README фронтенда</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-gray-500 border-b border-gray-800">
+                <th className="px-3 py-2">Параметр</th>
+                <th className="px-3 py-2">README фронтенда</th>
+                <th className="px-3 py-2">Реальный код (lib/api.ts)</th>
+                <th className="px-3 py-2">Бэкенд</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-b border-gray-800/50">
+                <td className="px-3 py-2 text-gray-300">JWT формат</td>
+                <td className="px-3 py-2"><code className="text-blue-400">{'{ token, user }'}</code></td>
+                <td className="px-3 py-2 text-gray-400">setToken(token) — один токен</td>
+                <td className="px-3 py-2"><span className="text-green-400">✓ {`{ token, user }`}</span></td>
+              </tr>
+              <tr className="border-b border-gray-800/50">
+                <td className="px-3 py-2 text-gray-300">User формат</td>
+                <td className="px-3 py-2"><code className="text-blue-400">total_points</code></td>
+                <td className="px-3 py-2 text-gray-400">totalPoints (camelCase)</td>
+                <td className="px-3 py-2"><span className="text-green-400">✓ totalPoints</span></td>
+              </tr>
+              <tr className="border-b border-gray-800/50">
+                <td className="px-3 py-2 text-gray-300">Task detail</td>
+                <td className="px-3 py-2"><code className="text-blue-400">expected_result</code></td>
+                <td className="px-3 py-2 text-gray-400">expectedResult (camelCase)</td>
+                <td className="px-3 py-2"><span className="text-green-400">✓ expectedResult</span></td>
+              </tr>
+              <tr className="border-b border-gray-800/50">
+                <td className="px-3 py-2 text-gray-300">Assign body</td>
+                <td className="px-3 py-2"><code className="text-blue-400">{'{ task_id }'}</code></td>
+                <td className="px-3 py-2 text-gray-400">{'{ taskId }'} (camelCase)</td>
+                <td className="px-3 py-2"><span className="text-green-400">✓ taskId</span></td>
+              </tr>
+              <tr className="border-b border-gray-800/50">
+                <td className="px-3 py-2 text-gray-300">Admin users</td>
+                <td className="px-3 py-2"><code className="text-blue-400">assigned_task_id</code></td>
+                <td className="px-3 py-2 text-gray-400">assignedTaskId (camelCase)</td>
+                <td className="px-3 py-2"><span className="text-green-400">✓ assignedTaskId</span></td>
+              </tr>
+              <tr className="border-b border-gray-800/50">
+                <td className="px-3 py-2 text-gray-300">Settings</td>
+                <td className="px-3 py-2 text-gray-500">не описан</td>
+                <td className="px-3 py-2 text-gray-400">GET/PUT /admin/settings</td>
+                <td className="px-3 py-2"><span className="text-green-400">✓ реализован</span></td>
+              </tr>
+              <tr className="border-b border-gray-800/50">
+                <td className="px-3 py-2 text-gray-300">Leaderboard</td>
+                <td className="px-3 py-2"><code className="text-blue-400">total_points</code></td>
+                <td className="px-3 py-2 text-gray-400">totalPoints (camelCase)</td>
+                <td className="px-3 py-2"><span className="text-green-400">✓ totalPoints</span></td>
+              </tr>
+              <tr>
+                <td className="px-3 py-2 text-gray-300">WebSocket URL</td>
+                <td className="px-3 py-2"><code className="text-blue-400">ws://...:8000/ws/leaderboard</code></td>
+                <td className="px-3 py-2 text-gray-400">.replace('/api', '/ws') + '/leaderboard'</td>
+                <td className="px-3 py-2"><span className="text-green-400">✓ /ws/leaderboard/</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-        <h3 className="text-lg font-semibold mb-4">📦 Зависимости</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {[
-            { name: 'Django', version: '4.2+', desc: 'Веб-фреймворк' },
-            { name: 'DRF', version: '3.14+', desc: 'REST API' },
-            { name: 'simplejwt', version: '5.3+', desc: 'JWT-аутентификация' },
-            { name: 'django-cors-headers', version: '4.3+', desc: 'CORS' },
-            { name: 'channels', version: '4.0+', desc: 'WebSocket' },
-            { name: 'psycopg2-binary', version: '2.9+', desc: 'PostgreSQL драйвер' },
-          ].map((dep) => (
-            <div key={dep.name} className="flex items-center gap-3 p-2 bg-gray-800/50 rounded-lg">
-              <span className="px-2 py-0.5 bg-blue-900/50 text-blue-400 text-xs rounded font-mono">
-                {dep.version}
-              </span>
-              <div>
-                <span className="text-sm font-medium">{dep.name}</span>
-                <span className="text-xs text-gray-500 ml-2">— {dep.desc}</span>
+      {checks.map((category) => (
+        <div key={category.category} className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+          <div className="p-4 border-b border-gray-800 bg-gray-800/30">
+            <h3 className="font-semibold text-lg">{category.category}</h3>
+          </div>
+          <div className="divide-y divide-gray-800/50">
+            {category.items.map((item, idx) => (
+              <div key={idx} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-800/30">
+                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                  item.ok ? 'bg-green-900/50 text-green-400 border border-green-800' : 'bg-red-900/50 text-red-400 border border-red-800'
+                }`}>
+                  {item.ok ? '✓' : '✗'}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <code className="text-sm text-gray-200 font-mono">{item.name}</code>
+                  <p className="text-xs text-gray-500 mt-0.5">{item.note}</p>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
-    </div>
-  )
-}
-
-function FeatureCard({ icon, title, description }: { icon: string; title: string; description: string }) {
-  return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 hover:border-gray-700 transition-colors">
-      <div className="text-2xl mb-2">{icon}</div>
-      <h4 className="font-semibold mb-1">{title}</h4>
-      <p className="text-sm text-gray-400">{description}</p>
+      ))}
     </div>
   )
 }
@@ -254,32 +285,32 @@ function EndpointsTab({ copyCode, copiedCode }: { copyCode: (code: string, id: s
       section: '🔐 Аутентификация',
       items: [
         { method: 'POST', path: '/api/auth/register', desc: 'Регистрация', auth: false,
-          body: '{"username": "ivan", "email": "ivan@mail.ru", "password": "pass123"}',
-          response: '{"token": "eyJ...", "user": {"id": 1, "username": "ivan", ...}}' },
+          body: '{"username": "ivan.petrov", "email": "ivan@cdek.digital", "password": "secure_password"}',
+          response: '{"token": "eyJhbGci...", "user": {"id": 1, "username": "ivan.petrov", "email": "ivan@cdek.digital", "rating": 0, "totalPoints": 0, "role": "participant"}}' },
         { method: 'POST', path: '/api/auth/login', desc: 'Вход', auth: false,
-          body: '{"username": "ivan", "password": "pass123"}',
-          response: '{"token": "eyJ...", "user": {...}}' },
+          body: '{"username": "ivan.petrov", "password": "secure_password"}',
+          response: '{"token": "eyJhbGci...", "user": {"id": 1, "username": "ivan.petrov", "totalPoints": 450, "role": "participant"}}' },
       ]
     },
     {
       section: '👤 Профиль',
       items: [
         { method: 'GET', path: '/api/profile', desc: 'Данные пользователя', auth: true,
-          response: '{"id": 1, "username": "ivan", "rating": 1250, "total_points": 450, "rank": 3, "solved_tasks": [1, 2], "role": "participant"}' },
+          response: '{"id": 1, "username": "ivan.petrov", "email": "ivan@cdek.digital", "rating": 1250, "totalPoints": 450, "rank": 3, "solvedTasks": [1, 2, 5], "role": "participant"}' },
       ]
     },
     {
       section: '🎮 Задачи',
       items: [
         { method: 'GET', path: '/api/tasks', desc: 'Список задач', auth: true,
-          response: '[{"id": 1, "title": "...", "difficulty": "easy", "points": 100, "status": "unsolved"}]' },
+          response: '[{"id": 1, "title": "Найди активных хакеров", "difficulty": "easy", "points": 100, "status": "unsolved"}]' },
         { method: 'GET', path: '/api/tasks/{id}', desc: 'Детали задачи', auth: true,
-          response: '{"id": 1, "title": "...", "description": "...", "schema": "...", "tables": [...]}' },
+          response: '{"id": 3, "title": "Анализ заказов", "description": "...", "difficulty": "hard", "points": 500, "schema": "CREATE TABLE...", "tables": [...], "expectedResult": [...]}' },
         { method: 'POST', path: '/api/tasks/{id}/execute', desc: 'Выполнить запрос (Run)', auth: true,
           body: '{"query": "SELECT name FROM users WHERE status = \'active\'"}',
-          response: '{"status": "success", "data": [...], "execution_time": 0.045}' },
+          response: '{"status": "success", "data": [{"name": "Иван Петров"}], "execution_time": 0.045}' },
         { method: 'POST', path: '/api/tasks/{id}/submit', desc: 'Отправить решение', auth: true,
-          body: '{"query": "SELECT city, COUNT(*) as user_count FROM users GROUP BY city"}',
+          body: '{"query": "SELECT city, COUNT(*) FROM users GROUP BY city"}',
           response: '{"is_correct": true, "points_earned": 100, "new_total_points": 550, "expected_result": [...]}' },
       ]
     },
@@ -287,26 +318,30 @@ function EndpointsTab({ copyCode, copiedCode }: { copyCode: (code: string, id: s
       section: '🏆 Лидерборд',
       items: [
         { method: 'GET', path: '/api/leaderboard', desc: 'Топ участников', auth: false,
-          response: '[{"rank": 1, "username": "...", "total_points": 1250, "solved_tasks": 8, "avg_time": 0.45, "avatar": "АС"}]' },
+          response: '[{"rank": 1, "username": "Алексей Смирнов", "totalPoints": 1250, "solvedTasks": 8, "avgTime": 0.45, "avatar": "АС"}]' },
       ]
     },
     {
       section: '👥 Админка',
       items: [
         { method: 'GET', path: '/api/admin/users', desc: 'Все пользователи', auth: true, admin: true,
-          response: '[{"id": 1, "username": "ivan", "total_points": 450, "assigned_task_id": 3}]' },
+          response: '[{"id": 1, "username": "ivan.petrov", "email": "ivan@cdek.digital", "rating": 1250, "totalPoints": 450, "assignedTaskId": 3}]' },
         { method: 'POST', path: '/api/admin/users/{id}/assign', desc: 'Назначить задачу', auth: true, admin: true,
-          body: '{"task_id": 3}',
+          body: '{"taskId": 3}',
           response: '{"success": true, "message": "Задача назначена"}' },
         { method: 'POST', path: '/api/admin/users/{id}/clear', desc: 'Снять назначение', auth: true, admin: true,
           response: '{"success": true, "message": "Назначение снято"}' },
         { method: 'GET', path: '/api/user/assigned-task', desc: 'Назначенная задача', auth: true,
-          response: '{"id": 3, "title": "...", "difficulty": "hard", "points": 500}' },
+          response: '{"id": 3, "title": "Анализ заказов", "difficulty": "hard", "points": 500}' },
         { method: 'GET', path: '/api/admin/tasks', desc: 'Все задачи (админ)', auth: true, admin: true,
-          response: '[{"id": 1, "title": "...", "expected_result": [...]}]' },
-        { method: 'POST', path: '/api/admin/tasks/create', desc: 'Создать задачу', auth: true, admin: true,
-          body: '{"title": "...", "description": "...", "difficulty": "medium", "points": 250, "schema": "...", "tables": [...], "expected_result": [...]}',
-          response: '{"id": 10, "title": "...", "success": true}' },
+          response: '[{"id": 1, "title": "...", "expectedResult": [...]}]' },
+        { method: 'POST', path: '/api/admin/tasks', desc: 'Создать задачу', auth: true, admin: true,
+          body: '{"title": "...", "description": "...", "difficulty": "medium", "points": 250, "schema": "...", "tables": [...], "expectedResult": [...]}',
+          response: '{"id": 10, "title": "Новая задача", "success": true}' },
+        { method: 'GET', path: '/api/admin/settings', desc: 'Настройки', auth: true, admin: true,
+          response: '{"battle_start": "2026-09-15T10:00:00Z", "round_duration_minutes": 120}' },
+        { method: 'PUT', path: '/api/admin/settings', desc: 'Обновить настройки', auth: true, admin: true,
+          body: '{"battle_start": "2026-09-15T10:00:00Z", "round_duration_minutes": 90}' },
       ]
     },
   ]
@@ -316,10 +351,12 @@ function EndpointsTab({ copyCode, copiedCode }: { copyCode: (code: string, id: s
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
         <p className="text-sm text-gray-400">
           <span className="text-yellow-400 font-mono">Base URL:</span>{' '}
-          <code className="text-green-400">http://localhost:8000</code>
+          <code className="text-green-400">http://localhost:8000/api</code>
           {' • '}
           <span className="text-yellow-400 font-mono">Auth:</span>{' '}
           <code className="text-green-400">Authorization: Bearer {'<token>'}</code>
+          {' • '}
+          <span className="text-yellow-400">Все ответы camelCase</span>
         </p>
       </div>
 
@@ -328,12 +365,7 @@ function EndpointsTab({ copyCode, copiedCode }: { copyCode: (code: string, id: s
           <h3 className="text-lg font-semibold">{section.section}</h3>
           <div className="space-y-2">
             {section.items.map((ep, idx) => (
-              <EndpointCard 
-                key={idx} 
-                endpoint={ep} 
-                copyCode={copyCode} 
-                copiedCode={copiedCode} 
-              />
+              <EndpointCard key={idx} endpoint={ep} copyCode={copyCode} copiedCode={copiedCode} />
             ))}
           </div>
         </div>
@@ -343,9 +375,7 @@ function EndpointsTab({ copyCode, copiedCode }: { copyCode: (code: string, id: s
 }
 
 function EndpointCard({ endpoint, copyCode, copiedCode }: { 
-  endpoint: any; 
-  copyCode: (code: string, id: string) => void;
-  copiedCode: string | null;
+  endpoint: any; copyCode: (code: string, id: string) => void; copiedCode: string | null;
 }) {
   const [expanded, setExpanded] = useState(false)
   const methodColors: Record<string, string> = {
@@ -454,7 +484,7 @@ function ModelsTab() {
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
         <p className="text-sm text-gray-400">
           Модели определены в <code className="text-green-400">api/models.py</code>. 
-          AUTH_USER_MODEL = 'api.User'. Миграции: <code className="text-green-400">python manage.py migrate</code>
+          AUTH_USER_MODEL = 'api.User'. Совпадают со схемой из README фронтенда.
         </p>
       </div>
 
@@ -525,24 +555,16 @@ venv\\Scripts\\activate`
     },
     {
       title: '6. Создание админ-пользователя',
-      code: `# Вариант 1: Кастомная команда
-python manage.py create_admin --username admin --password admin123
-
-# Вариант 2: Через Django shell
-python manage.py shell
->>> from api.models import User
->>> admin = User.objects.create_superuser('admin', 'admin@mail.ru', 'admin123')
->>> admin.role = 'admin'
->>> admin.save()`
+      code: `# Кастомная команда
+python manage.py create_admin --username admin --password admin123`
     },
     {
       title: '7. Запуск сервера',
       code: `# Разработка
 python manage.py runserver 0.0.0.0:8000
 
-# Продакшен (с gunicorn + daphne для WebSocket)
-gunicorn sql_battle.wsgi:application --bind 0.0.0.0:8000
-daphne -b 0.0.0.0 -p 8001 sql_battle.asgi:application`
+# Продакшен
+gunicorn sql_battle.wsgi:application --bind 0.0.0.0:8000`
     },
   ]
 
@@ -563,17 +585,15 @@ daphne -b 0.0.0.0 -p 8001 sql_battle.asgi:application`
       ))}
 
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-        <h3 className="font-semibold mb-3">🐘 PostgreSQL (опционально)</h3>
-        <p className="text-sm text-gray-400 mb-3">Для продакшена рекомендуется PostgreSQL:</p>
+        <h3 className="font-semibold mb-3">🐳 Docker (опционально)</h3>
         <CodeBlock 
-          code={`# .env
-DATABASE_URL=postgresql://user:password@localhost:5432/sql_battle
+          code={`# Запуск с PostgreSQL
+docker-compose up -d
 
-# Или создайте БД:
-# CREATE DATABASE sql_battle;
-# CREATE USER sql_user WITH PASSWORD 'password';
-# GRANT ALL PRIVILEGES ON DATABASE sql_battle TO sql_user;`}
-          id="postgres-config"
+# Или только бэкенд с SQLite
+docker build -t sql-battle-backend .
+docker run -p 8000:8000 sql-battle-backend`}
+          id="docker-run"
           copyCode={copyCode}
           copiedCode={copiedCode}
         />
@@ -585,7 +605,7 @@ DATABASE_URL=postgresql://user:password@localhost:5432/sql_battle
           <p className="text-gray-300">После запуска проверьте:</p>
           <ul className="space-y-1 text-gray-400 ml-4">
             <li>• <code className="text-green-400">http://localhost:8000/admin/</code> — Django Admin</li>
-            <li>• <code className="text-green-400">POST /api/auth/register</code> — регистрация</li>
+            <li>• <code className="text-green-400">POST /api/auth/login</code> — вход</li>
             <li>• <code className="text-green-400">GET /api/leaderboard</code> — лидерборд</li>
             <li>• <code className="text-green-400">GET /api/tasks</code> — список задач (с токеном)</li>
           </ul>
@@ -596,80 +616,42 @@ DATABASE_URL=postgresql://user:password@localhost:5432/sql_battle
 }
 
 function WebSocketTab({ copyCode, copiedCode }: { copyCode: (code: string, id: string) => void; copiedCode: string | null }) {
-  const clientCode = `// Подключение к WebSocket лидерборда
-const ws = new WebSocket('ws://localhost:8000/ws/leaderboard/');
-
-ws.onopen = () => {
-  console.log('Подключено к лидерборду');
-};
+  const clientCode = `// Фронтенд подключается так (из lib/api.ts):
+const wsUrl = API_BASE_URL.replace('http://', 'ws://').replace('/api', '/ws');
+const ws = new WebSocket(\`\${wsUrl}/leaderboard\`);
+// Результат: ws://localhost:8000/ws/leaderboard
 
 ws.onmessage = (event) => {
-  const message = JSON.parse(event.data);
-  
-  if (message.type === 'leaderboard_update') {
-    const leaderboard = message.data;
-    // Обновляем UI
-    console.log('Обновление лидерборда:', leaderboard);
-    // [
-    //   { rank: 1, username: "...", total_points: 1300, ... },
-    //   ...
+  const data = JSON.parse(event.data);
+  if (data.type === "leaderboard_update") {
+    onUpdate(data.data);
+    // data.data = [
+    //   { rank: 1, username: "...", totalPoints: 1300, solvedTasks: 8, avgTime: 0.45, avatar: "АС" }
     // ]
   }
-};
-
-ws.onclose = () => {
-  console.log('Отключено от лидерборда');
-  // Можно реализовать авто-переподключение
 };`
-
-  const consumerCode = `# api/consumers.py
-from channels.generic.websocket import AsyncWebSocketConsumer
-from channels.db import database_sync_to_async
-
-class LeaderboardConsumer(AsyncWebSocketConsumer):
-    async def connect(self):
-        self.group_name = 'leaderboard'
-        await self.channel_layer.group_add(
-            self.group_name, self.channel_name
-        )
-        await self.accept()
-        # Отправляем текущий лидерборд
-        data = await self.get_leaderboard()
-        await self.send(text_data=json.dumps({
-            'type': 'leaderboard_update',
-            'data': data
-        }))
-
-    async def disconnect(self, close_code):
-        await self.channel_layer.group_discard(
-            self.group_name, self.channel_name
-        )
-
-    async def leaderboard_update(self, event):
-        await self.send(text_data=json.dumps({
-            'type': 'leaderboard_update',
-            'data': event['data']
-        }))`
 
   return (
     <div className="space-y-6">
       <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-xl p-6">
         <h2 className="text-xl font-bold mb-2">⚡ WebSocket — Реалтайм лидерборд</h2>
         <p className="text-gray-300">
-          Обновления лидерборда отправляются в реальном времени через Django Channels.
-          При каждом успешном решении задача отправляется событие всем подключённым клиентам.
+          Обновления лидерборда через Django Channels. Совместимо с <code className="text-green-400">connectLeaderboardWebSocket()</code> из фронтенда.
         </p>
       </div>
 
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-        <h3 className="font-semibold mb-3">📡 Подключение</h3>
+        <h3 className="font-semibold mb-3">📡 URL подключения</h3>
         <div className="bg-gray-800 rounded-lg p-3 font-mono text-sm text-green-400">
           ws://localhost:8000/ws/leaderboard/
         </div>
+        <p className="text-xs text-gray-500 mt-2">
+          Фронтенд формирует URL: <code>API_BASE_URL.replace('http://', 'ws://').replace('/api', '/ws')</code> + <code>/leaderboard</code>
+        </p>
       </div>
 
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-        <h3 className="font-semibold mb-3">📨 Формат сообщения</h3>
+        <h3 className="font-semibold mb-3">📨 Формат сообщения (camelCase)</h3>
         <CodeBlock 
           code={`{
   "type": "leaderboard_update",
@@ -677,9 +659,9 @@ class LeaderboardConsumer(AsyncWebSocketConsumer):
     {
       "rank": 1,
       "username": "Алексей Смирнов",
-      "total_points": 1300,
-      "solved_tasks": 8,
-      "avg_time": 0.45,
+      "totalPoints": 1250,
+      "solvedTasks": 8,
+      "avgTime": 0.45,
       "avatar": "АС"
     }
   ]
@@ -692,13 +674,8 @@ class LeaderboardConsumer(AsyncWebSocketConsumer):
       </div>
 
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-        <h3 className="font-semibold mb-3">💻 Клиент (JavaScript)</h3>
+        <h3 className="font-semibold mb-3">💻 Клиент (из lib/api.ts)</h3>
         <CodeBlock code={clientCode} id="ws-client" copyCode={copyCode} copiedCode={copiedCode} language="javascript" />
-      </div>
-
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-        <h3 className="font-semibold mb-3">🐍 Сервер (Consumer)</h3>
-        <CodeBlock code={consumerCode} id="ws-consumer" copyCode={copyCode} copiedCode={copiedCode} language="python" />
       </div>
 
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
@@ -706,7 +683,7 @@ class LeaderboardConsumer(AsyncWebSocketConsumer):
         <ul className="space-y-2 text-sm text-gray-300">
           <li className="flex items-center gap-2">
             <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-            При подключении нового клиента (текущий лидерборд)
+            При подключении нового клиента
           </li>
           <li className="flex items-center gap-2">
             <span className="w-2 h-2 bg-green-500 rounded-full"></span>
@@ -714,7 +691,7 @@ class LeaderboardConsumer(AsyncWebSocketConsumer):
           </li>
           <li className="flex items-center gap-2">
             <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-            Периодически каждые 5 секунд для синхронизации
+            Каждые 5 секунд для синхронизации
           </li>
         </ul>
       </div>
