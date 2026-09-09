@@ -8,6 +8,7 @@ urlpatterns = [
 
     # Профиль
     path('profile', views.profile_view, name='profile'),
+    path('profile/history', views.profile_history_view, name='profile-history'),
 
     # Задачи
     path('tasks', views.task_list_view, name='task-list'),

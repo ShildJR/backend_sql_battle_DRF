@@ -91,6 +91,46 @@ def profile_view(request):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def profile_history_view(request):
+    """
+    GET /api/profile/history — История решений текущего пользователя.
+
+    Фронтенд ожидает массив объектов:
+    [
+        {
+            "id": 1,
+            "task_title": "Найди активных хакеров",
+            "difficulty": "easy",
+            "execution_time": 0.12,
+            "is_correct": true,
+            "points_earned": 100
+        },
+        ...
+    ]
+    """
+    user = request.user
+
+    # Получаем все попытки пользователя, отсортированные по дате (новые первые)
+    submissions = Submission.objects.filter(user=user).select_related('task').order_by('-created_at')
+
+    history = []
+    for sub in submissions:
+        # execution_time_ms → секунды (float)
+        execution_time = round((sub.execution_time_ms or 0) / 1000, 2)
+
+        history.append({
+            'id': sub.id,
+            'task_title': sub.task.title,
+            'difficulty': sub.task.difficulty,
+            'execution_time': execution_time,
+            'is_correct': sub.is_correct,
+            'points_earned': sub.points_earned,
+        })
+
+    return Response(history, status=status.HTTP_200_OK)
+
 # ==========================================
 # 3. ЗАДАЧИ
 # ==========================================
