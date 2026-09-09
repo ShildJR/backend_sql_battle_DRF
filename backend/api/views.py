@@ -131,6 +131,7 @@ def profile_history_view(request):
 
     return Response(history, status=status.HTTP_200_OK)
 
+
 # ==========================================
 # 3. ЗАДАЧИ
 # ==========================================
