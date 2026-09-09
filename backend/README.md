@@ -23,6 +23,9 @@
 ### 1. Установка зависимостей
 
 ```bash
+
+git clone https://github.com/ShildJR/backend_sql_battle_DRF
+
 cd backend
 python -m venv venv
 source venv/bin/activate  # Linux/Mac
@@ -37,6 +40,7 @@ pip install -r requirements.txt
 ```bash
 cp .env.example .env
 # Отредактируйте .env при необходимости
+Для теста редактировать не требуется
 ```
 
 ### 3. Миграции и запуск
