@@ -159,7 +159,8 @@ def compare_results(user_result: List[Dict], expected_result: List[Dict]) -> boo
         return val
 
     def normalize_row(row):
-        return tuple(sorted(normalize_value(v) for v in row.values()))
+        # Приводим все значения к строке, чтобы избежать ошибок сравнения типов
+        return tuple(sorted(str(v) if v is not None else '' for v in row.values()))
 
     # Сортируем строки для сравнения (порядок не важен)
     user_sorted = sorted(normalize_row(row) for row in user_result)
