@@ -40,4 +40,11 @@ urlpatterns = [
 
     # Админка — настройки (GET и PUT на одном URL)
     path('admin/settings', views.admin_settings_view, name='admin-settings'),
+    # Публичные настройки — доступны всем (для лобби/таймера)
+    path('settings', views.public_settings_view, name='public-settings'),
+
+    # Админские настройки — GET читает, PUT пишет
+    path('admin/settings', views.admin_settings_view, name='admin-settings'),
+
+    path('settings', views.public_settings_view, name='public-settings'),
 ]
