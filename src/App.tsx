@@ -108,29 +108,55 @@ function CodeBlock({ code, id, copyCode, copiedCode, language = 'bash' }: {
 }
 
 function DiagnosisTab({ copyCode, copiedCode }: { copyCode: (code: string, id: string) => void; copiedCode: string | null }) {
-  const frontendFix = `// lib/api.ts — добавить в конец файла (секция 2. ПРОФИЛЬ)
+  const frontendFix = `// lib/api.ts — изменения в бэкенде для совместимости с фронтендом
 
-export async function getUserSubmissionHistory() {
-    if (USE_MOCKS) {
-        await delay(300);
-        // Мок: возвращаем историю на основе решённых задач
-        return mockTasks
-            .filter(t => t.userResult)
-            .map(t => ({
-                id: t.id,
-                task_title: t.title,
-                difficulty: t.difficulty,
-                execution_time: t.userResult?.execution_time || 0,
-                is_correct: true,
-                points_earned: t.userResult?.points_earned || 0
-            }));
-    }
-
-    const res = await fetch(\`\${API_BASE_URL}/profile/history\`, {
-        headers: getAuthHeaders()
+// 1. submitSolution теперь принимает time_spent
+export async function submitSolution(taskId: number, query: string, timeSpent: number) {
+    const res = await fetch(\`\${API_BASE_URL}/tasks/\${taskId}/submit\`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ query, time_spent: timeSpent })
     });
-    if (!res.ok) throw new Error("Failed to fetch submission history");
     return res.json();
+}
+
+// 2. getLeaderboard теперь ожидает total_time_spent
+export async function getLeaderboard() {
+    const res = await fetch(\`\${API_BASE_URL}/leaderboard\`);
+    const data = await res.json();
+    return data.map((entry: any) => ({
+        rank: entry.rank,
+        username: entry.username,
+        avatar: entry.avatar,
+        totalPoints: entry.total_points ?? entry.totalPoints ?? 0,
+        solvedTasks: entry.solved_tasks ?? entry.solvedTasks ?? 0,
+        totalTimeSpent: entry.total_time_spent ?? entry.totalTimeSpent ?? 0,
+    }));
+}
+
+// 3. getUserProfile поддерживает оба формата
+export async function getUserProfile() {
+    const res = await fetch(\`\${API_BASE_URL}/profile\`, { headers: getAuthHeaders() });
+    const data = await res.json();
+    return {
+        id: data.id,
+        username: data.username,
+        email: data.email,
+        rating: data.rating ?? 0,
+        totalPoints: data.total_points ?? data.totalPoints ?? 0,
+        solvedTasks: data.solved_tasks ?? data.solvedTasks ?? [],
+        role: data.role ?? "participant",
+    };
+}
+
+// 4. WebSocket URL без /api
+export function connectLeaderboardWebSocket(onUpdate: (data: any[]) => void) {
+    const token = localStorage.getItem("sql_battle_token");
+    const wsBaseUrl = API_BASE_URL.replace('http://', 'ws://').replace('/api', '');
+    const tokenQuery = token ? \`?token=\${encodeURIComponent(token)}\` : "";
+    const wsUrl = \`\${wsBaseUrl}/ws/leaderboard\${tokenQuery}\`;
+    const ws = new WebSocket(wsUrl);
+    // ...
 }`
 
   const backendView = `# backend/api/views.py — добавить после profile_view
@@ -178,13 +204,122 @@ path('profile/history', views.profile_history_view, name='profile-history'),`
   return (
     <div className="space-y-6">
       {/* Заголовок */}
-      <div className="bg-gradient-to-r from-red-500/10 to-orange-500/10 border border-red-500/20 rounded-xl p-6">
-        <h2 className="text-2xl font-bold mb-2">🔍 Диагностика: страница /profile не загружается</h2>
+      <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-xl p-6">
+        <h2 className="text-2xl font-bold mb-2">🆕 Последние изменения в бэкенде</h2>
         <p className="text-gray-300">
-          Проблема: фронтенд вызывает <code className="text-red-400">getUserSubmissionHistory()</code>, 
-          но эта функция не определена в <code className="text-red-400">lib/api.ts</code>, 
-          а эндпоинт <code className="text-red-400">/api/profile/history</code> отсутствует в бэкенде.
+          Бэкенд обновлён для полной совместимости с изменениями во фронтенде:
         </p>
+        <ul className="mt-3 space-y-1 text-sm text-gray-400">
+          <li>✅ Убран префикс <code className="text-green-400">/api</code> — запросы идут напрямую</li>
+          <li>✅ Добавлен <code className="text-green-400">time_spent</code> в submit решения</li>
+          <li>✅ Лидерборд возвращает <code className="text-green-400">total_time_spent</code></li>
+          <li>✅ Профиль возвращает оба формата: <code className="text-green-400">totalPoints</code> и <code className="text-green-400">total_points</code></li>
+          <li>✅ <code className="text-green-400">/tasks</code> доступен без авторизации</li>
+        </ul>
+      </div>
+
+      {/* Изменения */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <span className="text-blue-400">📝</span> Что изменилось в бэкенде
+        </h3>
+        <div className="space-y-4">
+          <div className="bg-blue-950/30 border border-blue-900/50 rounded-lg p-4">
+            <p className="text-sm text-blue-300 font-semibold mb-2">1. Убран префикс /api</p>
+            <p className="text-xs text-gray-400 mb-2">Файл: <code className="text-green-400">backend/sql_battle/urls.py</code></p>
+            <CodeBlock
+              code={`# Было:
+path('api/', include('api.urls')),
+
+# Стало:
+path('', include('api.urls')),  # Без префикса`}
+              id="change-urls"
+              copyCode={copyCode}
+              copiedCode={copiedCode}
+              language="python"
+            />
+          </div>
+
+          <div className="bg-blue-950/30 border border-blue-900/50 rounded-lg p-4">
+            <p className="text-sm text-blue-300 font-semibold mb-2">2. Submit принимает time_spent</p>
+            <p className="text-xs text-gray-400 mb-2">Файл: <code className="text-green-400">backend/api/serializers.py</code></p>
+            <CodeBlock
+              code={`class SubmitSolutionSerializer(serializers.Serializer):
+    query = serializers.CharField()
+    time_spent = serializers.FloatField(required=False, default=0)  # NEW`}
+              id="change-serializer"
+              copyCode={copyCode}
+              copiedCode={copiedCode}
+              language="python"
+            />
+          </div>
+
+          <div className="bg-blue-950/30 border border-blue-900/50 rounded-lg p-4">
+            <p className="text-sm text-blue-300 font-semibold mb-2">3. Лидерборд возвращает total_time_spent</p>
+            <p className="text-xs text-gray-400 mb-2">Файл: <code className="text-green-400">backend/api/views.py</code></p>
+            <CodeBlock
+              code={`# Считаем общее время на все правильные решения
+total_time_ms = Submission.objects.filter(
+    user=user, is_correct=True
+).aggregate(total=Sum('execution_time_ms'))['total']
+
+result.append({
+    'rank': rank,
+    'username': user.username,
+    'totalPoints': user.total_points,
+    'solvedTasks': solved_count,
+    'total_time_spent': total_time_seconds,  # NEW
+    'totalTimeSpent': total_time_seconds,    # NEW (camelCase)
+    'avgTime': ...,  # OLD (для совместимости)
+    'avatar': avatar
+})`}
+              id="change-leaderboard"
+              copyCode={copyCode}
+              copiedCode={copiedCode}
+              language="python"
+            />
+          </div>
+
+          <div className="bg-blue-950/30 border border-blue-900/50 rounded-lg p-4">
+            <p className="text-sm text-blue-300 font-semibold mb-2">4. Профиль возвращает оба формата</p>
+            <p className="text-xs text-gray-400 mb-2">Файл: <code className="text-green-400">backend/api/serializers.py</code></p>
+            <CodeBlock
+              code={`class UserProfileSerializer(serializers.ModelSerializer):
+    totalPoints = serializers.IntegerField(source='total_points', read_only=True)
+    total_points = serializers.IntegerField(read_only=True)  # NEW
+    solvedTasks = serializers.SerializerMethodField()
+    solved_tasks = serializers.SerializerMethodField()  # NEW
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'rating',
+                  'totalPoints', 'total_points',  # Оба формата
+                  'rank', 'solvedTasks', 'solved_tasks', 'role']`}
+              id="change-profile"
+              copyCode={copyCode}
+              copiedCode={copiedCode}
+              language="python"
+            />
+          </div>
+
+          <div className="bg-blue-950/30 border border-blue-900/50 rounded-lg p-4">
+            <p className="text-sm text-blue-300 font-semibold mb-2">5. /tasks доступен без авторизации</p>
+            <p className="text-xs text-gray-400 mb-2">Файл: <code className="text-green-400">backend/api/views.py</code></p>
+            <CodeBlock
+              code={`@api_view(['GET'])
+@permission_classes([AllowAny])  # Было: IsAuthenticated
+def task_list_view(request):
+    """GET /tasks — Список задач (публичный)"""
+    tasks = Task.objects.all()
+    serializer = TaskListSerializer(tasks, many=True, context={'request': request})
+    return Response(serializer.data, status=status.HTTP_200_OK)`}
+              id="change-tasks-public"
+              copyCode={copyCode}
+              copiedCode={copiedCode}
+              language="python"
+            />
+          </div>
+        </div>
       </div>
 
       {/* Причина */}
@@ -199,14 +334,14 @@ path('profile/history', views.profile_history_view, name='profile-history'),`
               TypeError: (0 , _api.getUserSubmissionHistory) is not a function
             </code>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-gray-800/50 rounded-lg p-4">
               <p className="text-sm font-semibold text-yellow-400 mb-2">Фронтенд (profile/page.tsx):</p>
               <pre className="text-xs text-gray-300 overflow-x-auto">
-{`import { getUserProfile, 
+{`import { getUserProfile,
   getUserSubmissionHistory } from "@/lib/api"
-// ↑ getUserSubmissionHistory 
+// ↑ getUserSubmissionHistory
 //   НЕ СУЩЕСТВУЕТ в lib/api.ts!`}
               </pre>
             </div>
@@ -215,7 +350,7 @@ path('profile/history', views.profile_history_view, name='profile-history'),`
               <pre className="text-xs text-gray-300 overflow-x-auto">
 {`urlpatterns = [
   path('profile', ...),
-  # path('profile/history', ...) 
+  # path('profile/history', ...)
   #   ← ОТСУТСТВУЕТ!
 ]`}
               </pre>
@@ -240,13 +375,13 @@ path('profile/history', views.profile_history_view, name='profile-history'),`
           <span className="bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded">Шаг 1</span>
           Бэкенд — добавить эндпоинт <code className="text-green-400">/api/profile/history</code>
         </h3>
-        
+
         <div className="space-y-4">
           <div>
             <p className="text-sm text-gray-400 mb-2">1.1 Добавить view в <code className="text-green-400">backend/api/views.py</code>:</p>
             <CodeBlock code={backendView} id="backend-view" copyCode={copyCode} copiedCode={copiedCode} language="python" />
           </div>
-          
+
           <div>
             <p className="text-sm text-gray-400 mb-2">1.2 Добавить URL в <code className="text-green-400">backend/api/urls.py</code>:</p>
             <CodeBlock code={backendUrl} id="backend-url" copyCode={copyCode} copiedCode={copiedCode} language="python" />
@@ -254,7 +389,7 @@ path('profile/history', views.profile_history_view, name='profile-history'),`
 
           <div className="bg-gray-800/50 rounded-lg p-4">
             <p className="text-sm text-gray-400 mb-2">Формат ответа (совместим с фронтендом):</p>
-            <CodeBlock 
+            <CodeBlock
               code={`[
   {
     "id": 1,
@@ -288,7 +423,7 @@ path('profile/history', views.profile_history_view, name='profile-history'),`
           <span className="bg-purple-600 text-white text-xs font-bold px-2 py-0.5 rounded">Шаг 2</span>
           Фронтенд — добавить функцию в <code className="text-green-400">lib/api.ts</code>
         </h3>
-        
+
         <p className="text-sm text-gray-400 mb-2">
           Добавить функцию <code className="text-green-400">getUserSubmissionHistory</code> в секцию "2. ПРОФИЛЬ":
         </p>
@@ -335,7 +470,7 @@ path('profile/history', views.profile_history_view, name='profile-history'),`
         <h3 className="text-lg font-semibold mb-4">📊 Схема данных</h3>
         <pre className="text-sm text-gray-300 whitespace-pre overflow-x-auto">{`profile/page.tsx                    backend/api/
 ─────────────────                    ──────────────
-                                     
+
 import {                             views.py
   getUserProfile,                    ├── profile_view()        → GET /api/profile
   getUserSubmissionHistory  ←─────── ├── profile_history_view() → GET /api/profile/history  ← НОВЫЙ!
@@ -368,7 +503,7 @@ useEffect →                          ├── path('profile', ...)
             <br />
             <code className="text-red-400 text-sm">"GET /ws/leaderboard?token=eyJ... HTTP/1.1" 404</code>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-gray-800/50 rounded-lg p-4">
               <p className="text-sm font-semibold text-red-400 mb-2">1. Routing: слэш</p>
@@ -411,7 +546,7 @@ useEffect →                          ├── path('profile', ...)
 
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
         <h3 className="text-lg font-semibold mb-4">🚀 Правильный запуск сервера</h3>
-        <CodeBlock 
+        <CodeBlock
           code={`# ❌ НЕ РАБОТАЕТ для WebSocket:
 python manage.py runserver 0.0.0.0:8000
 
@@ -704,7 +839,7 @@ function EndpointsTab({ copyCode, copiedCode }: { copyCode: (code: string, id: s
   )
 }
 
-function EndpointCard({ endpoint, copyCode, copiedCode }: { 
+function EndpointCard({ endpoint, copyCode, copiedCode }: {
   endpoint: any; copyCode: (code: string, id: string) => void; copiedCode: string | null;
 }) {
   const [expanded, setExpanded] = useState(false)
@@ -813,7 +948,7 @@ function ModelsTab() {
     <div className="space-y-6">
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
         <p className="text-sm text-gray-400">
-          Модели определены в <code className="text-green-400">api/models.py</code>. 
+          Модели определены в <code className="text-green-400">api/models.py</code>.
           AUTH_USER_MODEL = 'api.User'. Совпадают со схемой из README фронтенда.
         </p>
       </div>
@@ -916,7 +1051,7 @@ gunicorn sql_battle.wsgi:application --bind 0.0.0.0:8000`
 
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
         <h3 className="font-semibold mb-3">🐳 Docker (опционально)</h3>
-        <CodeBlock 
+        <CodeBlock
           code={`# Запуск с PostgreSQL
 docker-compose up -d
 
@@ -980,7 +1115,7 @@ python manage.py runserver 0.0.0.0:8000`
 Not Found: /ws/leaderboard
 "GET /ws/leaderboard?token=eyJ... HTTP/1.1" 404 2465
 
-# Причина: сервер запущен через WSGI (runserver), 
+# Причина: сервер запущен через WSGI (runserver),
 # а не через ASGI. WebSocket-запросы не обрабатываются.
 
 # Решение: запустить через daphne или uvicorn
@@ -1005,7 +1140,7 @@ daphne -b 0.0.0.0 -p 8000 sql_battle.asgi:application`
             <p className="text-sm text-red-300 mb-2">Была ошибка:</p>
             <CodeBlock code={errorLog} id="ws-error-log" copyCode={copyCode} copiedCode={copiedCode} language="bash" />
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="bg-gray-800/50 rounded-lg p-3">
               <p className="text-xs text-yellow-400 font-semibold mb-1">Проблема 1</p>
@@ -1044,7 +1179,7 @@ daphne -b 0.0.0.0 -p 8000 sql_battle.asgi:application`
 
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
         <h3 className="font-semibold mb-3">📨 Формат сообщения (camelCase)</h3>
-        <CodeBlock 
+        <CodeBlock
           code={`{
   "type": "leaderboard_update",
   "data": [

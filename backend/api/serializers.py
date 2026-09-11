@@ -52,14 +52,16 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
-    """Полный профиль пользователя — camelCase"""
+    """Полный профиль пользователя — возвращает оба формата (snake_case и camelCase)"""
     totalPoints = serializers.IntegerField(source='total_points', read_only=True)
+    total_points = serializers.IntegerField(read_only=True)  # Snake case для совместимости
     solvedTasks = serializers.SerializerMethodField()
+    solved_tasks = serializers.SerializerMethodField()  # Snake case для совместимости
     rank = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'rating', 'totalPoints', 'rank', 'solvedTasks', 'role']
+        fields = ['id', 'username', 'email', 'rating', 'totalPoints', 'total_points', 'rank', 'solvedTasks', 'solved_tasks', 'role']
 
     def get_solvedTasks(self, obj):
         return list(
@@ -67,6 +69,9 @@ class UserProfileSerializer(serializers.ModelSerializer):
                 user=obj, is_correct=True
             ).values_list('task_id', flat=True).distinct()
         )
+
+    def get_solved_tasks(self, obj):
+        return self.get_solvedTasks(obj)
 
     def get_rank(self, obj):
         users_above = User.objects.filter(total_points__gt=obj.total_points).count()
@@ -126,6 +131,7 @@ class ExecuteQuerySerializer(serializers.Serializer):
 
 class SubmitSolutionSerializer(serializers.Serializer):
     query = serializers.CharField()
+    time_spent = serializers.FloatField(required=False, default=0)  # Время в секундах
 
 
 class AdminUserSerializer(serializers.ModelSerializer):
