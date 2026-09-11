@@ -5,14 +5,18 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.db.models import Avg, Q, Count
+from django.db.models import Avg, Q, Count, Sum
+from django.utils import timezone
+from datetime import timedelta
 
-from .models import User, Task, Submission, TaskAssignment
+from .models import User, Task, Submission, TaskAssignment, UserGroup
 from .serializers import (
     RegisterSerializer, LoginSerializer, UserSerializer, UserProfileSerializer,
     TaskListSerializer, TaskDetailSerializer, AdminTaskSerializer, CreateTaskSerializer,
     ExecuteQuerySerializer, SubmitSolutionSerializer, AdminUserSerializer,
-    AssignTaskSerializer, LeaderboardEntrySerializer, SettingsSerializer,
+    AssignTaskSerializer, BulkAssignTasksSerializer, AssignTasksToGroupSerializer,
+    UserGroupSerializer, UserGroupCreateSerializer,
+    LeaderboardEntrySerializer, SettingsSerializer,
 )
 from .permissions import IsAdmin
 from .utils import execute_sql_sandbox, validate_query, compare_results
@@ -137,9 +141,9 @@ def profile_history_view(request):
 # ==========================================
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])  # Изменено с IsAuthenticated на AllowAny
 def task_list_view(request):
-    """GET /api/tasks — Список задач (с полем status)"""
+    """GET /tasks — Список задач (с полем status)"""
     tasks = Task.objects.all()
     serializer = TaskListSerializer(tasks, many=True, context={'request': request})
     return Response(serializer.data, status=status.HTTP_200_OK)
@@ -220,6 +224,7 @@ def submit_solution_view(request, task_id):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     query = serializer.validated_data['query']
+    time_spent = serializer.validated_data.get('time_spent', 0)  # Время от фронтенда в секундах
     user = request.user
 
     # Валидация запроса
@@ -227,7 +232,8 @@ def submit_solution_view(request, task_id):
         # Сохраняем неправильную попытку
         Submission.objects.create(
             user=user, task=task, query=query,
-            is_correct=False, points_earned=0
+            is_correct=False, points_earned=0,
+            execution_time_ms=int(time_spent * 1000) if time_spent else None
         )
         return Response({
             'is_correct': False,
@@ -244,6 +250,10 @@ def submit_solution_view(request, task_id):
         tables_data=task.tables
     )
     execution_time_ms = int((time.time() - start_time) * 1000)
+
+    # Используем время от фронтенда если оно больше (включает время написания)
+    if time_spent > 0:
+        execution_time_ms = max(execution_time_ms, int(time_spent * 1000))
 
     if not success:
         # Ошибка выполнения
@@ -332,11 +342,12 @@ def get_leaderboard_data():
             user=user, is_correct=True
         ).values('task_id').distinct().count()
 
-        avg_time = Submission.objects.filter(
+        # Считаем общее время, потраченное на все правильные решения
+        total_time_ms = Submission.objects.filter(
             user=user, is_correct=True, execution_time_ms__isnull=False
-        ).aggregate(avg=Avg('execution_time_ms'))['avg']
+        ).aggregate(total=Sum('execution_time_ms'))['total']
 
-        avg_time_seconds = round((avg_time or 0) / 1000, 2)
+        total_time_seconds = round((total_time_ms or 0) / 1000, 2)
         avatar = user.username[:2].upper() if user.username else '??'
 
         result.append({
@@ -344,7 +355,9 @@ def get_leaderboard_data():
             'username': user.username,
             'totalPoints': user.total_points,
             'solvedTasks': solved_count,
-            'avgTime': avg_time_seconds,
+            'total_time_spent': total_time_seconds,  # Новое поле
+            'totalTimeSpent': total_time_seconds,  # Для обратной совместимости
+            'avgTime': round(total_time_seconds / max(solved_count, 1), 2),  # Старое поле
             'avatar': avatar
         })
 
@@ -360,27 +373,62 @@ def leaderboard_view(request):
 
 
 # ==========================================
-# 6. ЛОББИ — Назначенная задача
+# 6. ЛОББИ — Назначенные задачи
 # ==========================================
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def assigned_task_view(request):
-    """GET /api/user/assigned-task — Получить назначенную задачу"""
-    try:
-        assignment = request.user.assignment
+def assigned_tasks_view(request):
+    """GET /user/assigned-tasks — Получить все назначенные задачи пользователя"""
+    assignments = TaskAssignment.objects.filter(
+        user=request.user,
+        completed_at__isnull=True  # Только невыполненные задачи
+    ).select_related('task').order_by('assigned_at')
+
+    tasks = []
+    for assignment in assignments:
         task = assignment.task
-        return Response({
+        # Проверяем, решал ли уже эту задачу
+        solved = Submission.objects.filter(
+            user=request.user,
+            task=task,
+            is_correct=True
+        ).exists()
+
+        tasks.append({
             'id': task.id,
             'title': task.title,
             'difficulty': task.difficulty,
-            'points': task.points
-        }, status=status.HTTP_200_OK)
-    except TaskAssignment.DoesNotExist:
+            'points': task.points,
+            'solved': solved,
+            'assigned_at': assignment.assigned_at.isoformat() if assignment.assigned_at else None
+        })
+
+    return Response(tasks, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def assigned_task_view(request):
+    """GET /user/assigned-task — Получить первую назначенную задачу (для обратной совместимости)"""
+    assignment = TaskAssignment.objects.filter(
+        user=request.user,
+        completed_at__isnull=True
+    ).select_related('task').first()
+
+    if not assignment:
         return Response(
             {'error': 'Task not assigned'},
             status=status.HTTP_404_NOT_FOUND
         )
+
+    task = assignment.task
+    return Response({
+        'id': task.id,
+        'title': task.title,
+        'difficulty': task.difficulty,
+        'points': task.points
+    }, status=status.HTTP_200_OK)
 
 
 # ==========================================
@@ -399,57 +447,121 @@ def admin_users_view(request):
 @api_view(['POST'])
 @permission_classes([IsAdmin])
 def admin_assign_task_view(request, user_id):
-    """POST /api/admin/users/{user_id}/assign — Назначить задачу (принимает camelCase taskId)"""
+    """
+    POST /admin/users/{user_id}/assign — Назначить задачу(и) пользователю
+
+    Поддерживает два формата:
+    1. Одиночная задача: {"taskId": 3}
+    2. Массовое назначение: {"task_ids": [1, 2, 3]}
+
+    При назначении автоматически устанавливаются:
+    - started_at: текущее время + 1 минута
+    - completed_at: текущее время + 24 часа
+    """
     try:
         user = User.objects.get(id=user_id)
     except User.DoesNotExist:
         return Response({'detail': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
-    serializer = AssignTaskSerializer(data=request.data)
-    if not serializer.is_valid():
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    # Устанавливаем даты: начало через 1 минуту, завершение через 24 часа
+    now = timezone.now()
+    started_at = now + timedelta(minutes=1)
+    completed_at = now + timedelta(hours=24)
 
-    task_id = serializer.validated_data['taskId']
+    # Проверяем, какой формат данных пришёл
+    if 'task_ids' in request.data:
+        # Массовое назначение
+        serializer = BulkAssignTasksSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    try:
-        task = Task.objects.get(id=task_id)
-    except Task.DoesNotExist:
-        return Response({'detail': 'Task not found'}, status=status.HTTP_404_NOT_FOUND)
+        task_ids = serializer.validated_data['task_ids']
+        tasks = Task.objects.filter(id__in=task_ids)
 
-    # Создаём или обновляем назначение
-    assignment, created = TaskAssignment.objects.update_or_create(
-        user=user,
-        defaults={
-            'task': task,
-            'completed_at': None,
-        }
-    )
-    if not assignment.started_at:
-        from django.utils import timezone
-        assignment.started_at = timezone.now()
-        assignment.save()
+        if tasks.count() != len(task_ids):
+            found_ids = set(tasks.values_list('id', flat=True))
+            missing_ids = set(task_ids) - found_ids
+            return Response(
+                {'detail': f'Tasks not found: {list(missing_ids)}'},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
-    return Response({
-        'success': True,
-        'message': 'Задача назначена'
-    }, status=status.HTTP_200_OK)
+        assigned_count = 0
+        for task in tasks:
+            assignment, created = TaskAssignment.objects.get_or_create(
+                user=user,
+                task=task,
+                defaults={
+                    'started_at': started_at,
+                    'completed_at': completed_at
+                }
+            )
+            if created:
+                assigned_count += 1
+
+        return Response({
+            'success': True,
+            'message': f'Назначено задач: {assigned_count}',
+            'assigned_count': assigned_count
+        }, status=status.HTTP_200_OK)
+    else:
+        # Одиночная задача (для обратной совместимости)
+        serializer = AssignTaskSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        task_id = serializer.validated_data['taskId']
+
+        try:
+            task = Task.objects.get(id=task_id)
+        except Task.DoesNotExist:
+            return Response({'detail': 'Task not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        assignment, created = TaskAssignment.objects.get_or_create(
+            user=user,
+            task=task,
+            defaults={
+                'started_at': started_at,
+                'completed_at': completed_at
+            }
+        )
+
+        return Response({
+            'success': True,
+            'message': 'Задача назначена'
+        }, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
 @permission_classes([IsAdmin])
 def admin_clear_assignment_view(request, user_id):
-    """POST /api/admin/users/{user_id}/clear — Снять назначение"""
+    """
+    POST /admin/users/{user_id}/clear — Снять назначение(я)
+
+    Поддерживает два формата:
+    1. Снять все задачи: {} (пустое тело)
+    2. Снять конкретную задачу: {"taskId": 3}
+    """
     try:
         user = User.objects.get(id=user_id)
     except User.DoesNotExist:
         return Response({'detail': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
-    TaskAssignment.objects.filter(user=user).delete()
-
-    return Response({
-        'success': True,
-        'message': 'Назначение снято'
-    }, status=status.HTTP_200_OK)
+    if 'taskId' in request.data:
+        # Снять конкретную задачу
+        task_id = request.data['taskId']
+        deleted_count, _ = TaskAssignment.objects.filter(user=user, task_id=task_id).delete()
+        return Response({
+            'success': True,
+            'message': 'Назначение снято' if deleted_count else 'Назначение не найдено'
+        }, status=status.HTTP_200_OK)
+    else:
+        # Снять все задачи
+        TaskAssignment.objects.filter(user=user).delete()
+        return Response({
+            'success': True,
+            'message': 'Все назначения сняты'
+        }, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])
@@ -488,7 +600,193 @@ def admin_create_task_view(request):
 
 
 # ==========================================
-# 8. НАСТРОЙКИ (есть во фронтенде api.ts!)
+# 8. ГРУППЫ ПОЛЬЗОВАТЕЛЕЙ
+# ==========================================
+
+@api_view(['GET'])
+@permission_classes([IsAdmin])
+def admin_groups_view(request):
+    """GET /admin/groups — Список всех групп"""
+    groups = UserGroup.objects.all()
+    serializer = UserGroupSerializer(groups, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAdmin])
+def admin_create_group_view(request):
+    """POST /admin/groups — Создать группу пользователей"""
+    serializer = UserGroupCreateSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    data = serializer.validated_data
+
+    # Проверяем уникальность имени
+    if UserGroup.objects.filter(name=data['name']).exists():
+        return Response(
+            {'detail': 'Группа с таким названием уже существует'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    group = UserGroup.objects.create(
+        name=data['name'],
+        description=data.get('description', '')
+    )
+
+    # Добавляем пользователей в группу
+    user_ids = data.get('user_ids', [])
+    if user_ids:
+        users = User.objects.filter(id__in=user_ids)
+        group.users.set(users)
+
+    return Response({
+        'id': group.id,
+        'name': group.name,
+        'success': True
+    }, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET', 'PUT', 'DELETE'])
+@permission_classes([IsAdmin])
+def admin_group_detail_view(request, group_id):
+    """
+    GET /admin/groups/{id} — Детали группы
+    PUT /admin/groups/{id} — Обновить группу
+    DELETE /admin/groups/{id} — Удалить группу
+    """
+    try:
+        group = UserGroup.objects.get(id=group_id)
+    except UserGroup.DoesNotExist:
+        return Response({'detail': 'Group not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        serializer = UserGroupSerializer(group)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    elif request.method == 'PUT':
+        serializer = UserGroupCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        data = serializer.validated_data
+        group.name = data.get('name', group.name)
+        group.description = data.get('description', group.description)
+        group.save()
+
+        if 'user_ids' in request.data:
+            users = User.objects.filter(id__in=data['user_ids'])
+            group.users.set(users)
+
+        return Response({
+            'id': group.id,
+            'name': group.name,
+            'success': True
+        }, status=status.HTTP_200_OK)
+
+    elif request.method == 'DELETE':
+        group.delete()
+        return Response({
+            'success': True,
+            'message': 'Группа удалена'
+        }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAdmin])
+def admin_assign_tasks_to_group_view(request, group_id):
+    """
+    POST /admin/groups/{id}/assign — Назначить задачи всем пользователям группы
+
+    Request: {"task_ids": [1, 2, 3]}
+
+    При назначении автоматически устанавливаются:
+    - started_at: текущее время + 1 минута
+    - completed_at: текущее время + 24 часа
+    """
+    try:
+        group = UserGroup.objects.get(id=group_id)
+    except UserGroup.DoesNotExist:
+        return Response({'detail': 'Group not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    serializer = AssignTasksToGroupSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    task_ids = serializer.validated_data['task_ids']
+    tasks = Task.objects.filter(id__in=task_ids)
+
+    if tasks.count() != len(task_ids):
+        found_ids = set(tasks.values_list('id', flat=True))
+        missing_ids = set(task_ids) - found_ids
+        return Response(
+            {'detail': f'Tasks not found: {list(missing_ids)}'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Устанавливаем даты: начало через 1 минуту, завершение через 24 часа
+    now = timezone.now()
+    started_at = now + timedelta(minutes=1)
+    completed_at = now + timedelta(hours=24)
+
+    users = group.users.all()
+    assigned_count = 0
+
+    for user in users:
+        for task in tasks:
+            assignment, created = TaskAssignment.objects.get_or_create(
+                user=user,
+                task=task,
+                defaults={
+                    'started_at': started_at,
+                    'completed_at': completed_at
+                }
+            )
+            if created:
+                assigned_count += 1
+
+    return Response({
+        'success': True,
+        'message': f'Назначено {len(task_ids)} задач {users.count()} пользователям',
+        'assigned_count': assigned_count,
+        'users_count': users.count(),
+        'tasks_count': len(task_ids)
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAdmin])
+def admin_clear_group_assignments_view(request, group_id):
+    """
+    POST /admin/groups/{id}/clear — Снять все назначения у пользователей группы
+
+    Request (опционально): {"task_ids": [1, 2]} — если указаны, снимает только эти задачи
+    """
+    try:
+        group = UserGroup.objects.get(id=group_id)
+    except UserGroup.DoesNotExist:
+        return Response({'detail': 'Group not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    users = group.users.all()
+
+    if 'task_ids' in request.data:
+        task_ids = request.data['task_ids']
+        deleted_count, _ = TaskAssignment.objects.filter(
+            user__in=users,
+            task_id__in=task_ids
+        ).delete()
+    else:
+        deleted_count, _ = TaskAssignment.objects.filter(user__in=users).delete()
+
+    return Response({
+        'success': True,
+        'message': f'Снято назначений: {deleted_count}',
+        'deleted_count': deleted_count
+    }, status=status.HTTP_200_OK)
+
+
+# ==========================================
+# 9. НАСТРОЙКИ (есть во фронтенде api.ts!)
 # ==========================================
 
 # Хранилище настроек (в памяти, для простоты)

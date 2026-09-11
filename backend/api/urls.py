@@ -19,7 +19,8 @@ urlpatterns = [
     # Лидерборд
     path('leaderboard', views.leaderboard_view, name='leaderboard'),
 
-    # Лобби — назначенная задача
+    # Лобби — назначенные задачи
+    path('user/assigned-tasks', views.assigned_tasks_view, name='assigned-tasks'),
     path('user/assigned-task', views.assigned_task_view, name='assigned-task'),
 
     # Админка — пользователи
@@ -30,6 +31,13 @@ urlpatterns = [
     # Админка — задачи
     path('admin/tasks', views.admin_tasks_view, name='admin-tasks'),
     path('admin/tasks/create', views.admin_create_task_view, name='admin-create-task'),
+
+    # Админка — группы пользователей
+    path('admin/groups', views.admin_groups_view, name='admin-groups'),
+    path('admin/groups/create', views.admin_create_group_view, name='admin-create-group'),
+    path('admin/groups/<int:group_id>', views.admin_group_detail_view, name='admin-group-detail'),
+    path('admin/groups/<int:group_id>/assign', views.admin_assign_tasks_to_group_view, name='admin-assign-group'),
+    path('admin/groups/<int:group_id>/clear', views.admin_clear_group_assignments_view, name='admin-clear-group'),
 
     # Админка — настройки
     path('admin/settings', views.admin_settings_view, name='admin-settings'),
