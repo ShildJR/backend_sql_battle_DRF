@@ -6,6 +6,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.db.models import Avg, Q, Count, Sum
+from django.utils import timezone
+from datetime import timedelta
 
 from .models import User, Task, Submission, TaskAssignment, UserGroup
 from .serializers import (
@@ -451,11 +453,20 @@ def admin_assign_task_view(request, user_id):
     Поддерживает два формата:
     1. Одиночная задача: {"taskId": 3}
     2. Массовое назначение: {"task_ids": [1, 2, 3]}
+    
+    При назначении автоматически устанавливаются:
+    - started_at: текущее время + 1 минута
+    - completed_at: текущее время + 24 часа
     """
     try:
         user = User.objects.get(id=user_id)
     except User.DoesNotExist:
         return Response({'detail': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    # Устанавливаем даты: начало через 1 минуту, завершение через 24 часа
+    now = timezone.now()
+    started_at = now + timedelta(minutes=1)
+    completed_at = now + timedelta(hours=24)
 
     # Проверяем, какой формат данных пришёл
     if 'task_ids' in request.data:
@@ -480,7 +491,10 @@ def admin_assign_task_view(request, user_id):
             assignment, created = TaskAssignment.objects.get_or_create(
                 user=user,
                 task=task,
-                defaults={'completed_at': None}
+                defaults={
+                    'started_at': started_at,
+                    'completed_at': completed_at
+                }
             )
             if created:
                 assigned_count += 1
@@ -506,7 +520,10 @@ def admin_assign_task_view(request, user_id):
         assignment, created = TaskAssignment.objects.get_or_create(
             user=user,
             task=task,
-            defaults={'completed_at': None}
+            defaults={
+                'started_at': started_at,
+                'completed_at': completed_at
+            }
         )
 
         return Response({
@@ -682,6 +699,10 @@ def admin_assign_tasks_to_group_view(request, group_id):
     POST /admin/groups/{id}/assign — Назначить задачи всем пользователям группы
     
     Request: {"task_ids": [1, 2, 3]}
+    
+    При назначении автоматически устанавливаются:
+    - started_at: текущее время + 1 минута
+    - completed_at: текущее время + 24 часа
     """
     try:
         group = UserGroup.objects.get(id=group_id)
@@ -703,6 +724,11 @@ def admin_assign_tasks_to_group_view(request, group_id):
             status=status.HTTP_404_NOT_FOUND
         )
 
+    # Устанавливаем даты: начало через 1 минуту, завершение через 24 часа
+    now = timezone.now()
+    started_at = now + timedelta(minutes=1)
+    completed_at = now + timedelta(hours=24)
+
     users = group.users.all()
     assigned_count = 0
 
@@ -711,7 +737,10 @@ def admin_assign_tasks_to_group_view(request, group_id):
             assignment, created = TaskAssignment.objects.get_or_create(
                 user=user,
                 task=task,
-                defaults={'completed_at': None}
+                defaults={
+                    'started_at': started_at,
+                    'completed_at': completed_at
+                }
             )
             if created:
                 assigned_count += 1
