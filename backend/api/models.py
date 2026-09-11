@@ -130,53 +130,32 @@ class UserGroup(models.Model):
 
 
 class BattleSettings(models.Model):
-    """
-    Настройки турнира. Singleton — в БД всегда ровно одна запись (pk=1).
-    """
+    """Настройки баттла (синглтон)"""
     battle_start = models.DateTimeField(
-        null=True, blank=True,
-        verbose_name='Время начала турнира'
+        default='2026-09-15T10:00:00Z',
+        verbose_name='Начало баттла'
     )
-    battle_end = models.DateTimeField(
-        null=True, blank=True,
-        verbose_name='Время окончания турнира'
-    )
-    round_duration_minutes = models.PositiveIntegerField(
+    round_duration_minutes = models.IntegerField(
         default=120,
-        verbose_name='Длительность раунда (мин)'
+        verbose_name='Длительность раунда (минуты)'
     )
-    is_active = models.BooleanField(
-        default=False,
-        verbose_name='Турнир активен'
-    )
-    updated_at = models.DateTimeField(
-        auto_now=True,
-        verbose_name='Обновлено'
-    )
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
 
     class Meta:
-        verbose_name = 'Настройки турнира'
-        verbose_name_plural = 'Настройки турнира'
+        verbose_name = 'Настройки баттла'
+        verbose_name_plural = 'Настройки баттла'
 
     def __str__(self):
-        return 'Настройки турнира'
-
-    def save(self, *args, **kwargs):
-        # Singleton: всегда pk=1
-        self.pk = 1
-        super().save(*args, **kwargs)
+        return f"Настройки баттла (обновлено: {self.updated_at})"
 
     @classmethod
-    def get_solo(cls):
-        obj, _ = cls.objects.get_or_create(pk=1)
-        return obj
-
-    @property
-    def effective_battle_end(self):
-        """Если battle_end не задан, считаем его как battle_start + round_duration."""
-        if self.battle_end:
-            return self.battle_end
-        if self.battle_start:
-            from datetime import timedelta
-            return self.battle_start + timedelta(minutes=self.round_duration_minutes)
-        return None
+    def get_settings(cls):
+        """Получить или создать настройки (синглтон)"""
+        settings, created = cls.objects.get_or_create(
+            id=1,
+            defaults={
+                'battle_start': '2026-09-15T10:00:00Z',
+                'round_duration_minutes': 120
+            }
+        )
+        return settings

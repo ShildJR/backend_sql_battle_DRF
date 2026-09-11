@@ -690,47 +690,6 @@ def admin_clear_group_assignments_view(request, group_id):
 # 10. НАСТРОЙКИ (БД, singleton)
 # ==========================================
 
-def _serialize_settings(s: 'BattleSettings') -> dict:
-    return {
-        'battle_start': s.battle_start.isoformat() if s.battle_start else None,
-        'battle_end': s.effective_battle_end.isoformat() if s.effective_battle_end else None,
-        'round_duration_minutes': s.round_duration_minutes,
-        'is_active': s.is_active,
-        'updated_at': s.updated_at.isoformat() if s.updated_at else None,
-    }
-
-
-def _parse_dt(value):
-    """Парсит ISO-8601 строку в aware datetime или возвращает None."""
-    if not value:
-        return None
-    from django.utils.dateparse import parse_datetime
-    dt = parse_datetime(value)
-    if dt is None:
-        # пробуем через fromisoformat — поддерживает "Z" в новых Python
-        try:
-            from datetime import datetime, timezone as dt_timezone
-            dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
-        except Exception:
-            return None
-    if timezone.is_naive(dt):
-        dt = timezone.make_aware(dt, timezone.get_current_timezone())
-    return dt
-
-
-
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def public_settings_view(request):
-    """GET /api/settings — публичные настройки турнира (для лобби)."""
-    s = BattleSettings.get_solo()
-    return Response({
-        'battle_start': s.battle_start.isoformat() if s.battle_start else None,
-        'battle_end': s.effective_battle_end.isoformat() if s.effective_battle_end else None,
-        'round_duration_minutes': s.round_duration_minutes,
-        'is_active': s.is_active,
-    }, status=status.HTTP_200_OK)
-
 
 @api_view(['GET', 'PUT'])
 @permission_classes([IsAdmin])
@@ -739,14 +698,22 @@ def admin_settings_view(request):
     GET /admin/settings — Получить настройки
     PUT /admin/settings — Обновить настройки
     """
-    global _battle_settings
+    settings = BattleSettings.get_settings()
 
     if request.method == 'GET':
-        return Response(_battle_settings, status=status.HTTP_200_OK)
+        return Response({
+            'battle_start': settings.battle_start.isoformat() if settings.battle_start else None,
+            'round_duration_minutes': settings.round_duration_minutes
+        }, status=status.HTTP_200_OK)
 
     elif request.method == 'PUT':
         if 'battle_start' in request.data:
-            _battle_settings['battle_start'] = request.data['battle_start']
+            settings.battle_start = request.data['battle_start']
         if 'round_duration_minutes' in request.data:
-            _battle_settings['round_duration_minutes'] = request.data['round_duration_minutes']
-        return Response(_battle_settings, status=status.HTTP_200_OK)
+            settings.round_duration_minutes = request.data['round_duration_minutes']
+        settings.save()
+        
+        return Response({
+            'battle_start': settings.battle_start.isoformat() if settings.battle_start else None,
+            'round_duration_minutes': settings.round_duration_minutes
+        }, status=status.HTTP_200_OK)
