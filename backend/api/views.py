@@ -706,17 +706,6 @@ def admin_settings_view(request):
             'round_duration_minutes': settings.round_duration_minutes
         }, status=status.HTTP_200_OK)
 
-
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def public_settings_view(request):
-    """GET /api/settings — Публичные настройки (без авторизации)"""
-    settings = BattleSettings.get_settings()
-    return Response({
-        'battle_start': settings.battle_start.isoformat() if settings.battle_start else None,
-        'round_duration_minutes': settings.round_duration_minutes
-    }, status=status.HTTP_200_OK)
-
     elif request.method == 'PUT':
         if 'battle_start' in request.data:
             settings.battle_start = request.data['battle_start']
@@ -728,3 +717,14 @@ def public_settings_view(request):
             'battle_start': settings.battle_start.isoformat() if settings.battle_start else None,
             'round_duration_minutes': settings.round_duration_minutes
         }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def public_settings_view(request):
+    """GET /api/settings — Публичные настройки (без авторизации)"""
+    settings = BattleSettings.get_settings()
+    return Response({
+        'battle_start': settings.battle_start.isoformat() if settings.battle_start else None,
+        'round_duration_minutes': settings.round_duration_minutes
+    }, status=status.HTTP_200_OK)
