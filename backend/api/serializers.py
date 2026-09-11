@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Task, Submission, TaskAssignment
+from .models import User, Task, Submission, TaskAssignment, UserGroup
 
 
 class RegisterSerializer(serializers.Serializer):
