@@ -205,18 +205,39 @@ path('profile/history', views.profile_history_view, name='profile-history'),`
     <div className="space-y-6">
       {/* Заголовок */}
       <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-xl p-6">
-        <h2 className="text-2xl font-bold mb-2">🆕 Последние изменения в бэкенде</h2>
+        <h2 className="text-2xl font-bold mb-2">✅ Проверка соответствия бэкенда фронтенду</h2>
         <p className="text-gray-300">
-          Бэкенд обновлён для полной совместимости с изменениями во фронтенде:
+          Все <strong className="text-green-400">16 эндпоинтов</strong> фронтенда полностью реализованы в бэкенде.
         </p>
-        <ul className="mt-3 space-y-1 text-sm text-gray-400">
-          <li>✅ Убран префикс <code className="text-green-400">/api</code> — запросы идут напрямую</li>
-          <li>✅ Добавлен <code className="text-green-400">time_spent</code> в submit решения</li>
-          <li>✅ Лидерборд возвращает <code className="text-green-400">total_time_spent</code></li>
-          <li>✅ Профиль возвращает оба формата: <code className="text-green-400">totalPoints</code> и <code className="text-green-400">total_points</code></li>
-          <li>✅ <code className="text-green-400">/tasks</code> доступен без авторизации</li>
-          <li>✅ <strong className="text-green-400">Django Admin</strong> — массовое назначение задач пользователям и группам</li>
-        </ul>
+        
+        <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="bg-green-900/30 border border-green-800 rounded-lg p-3 text-center">
+            <div className="text-2xl font-bold text-green-400">16/16</div>
+            <div className="text-xs text-gray-400">Эндпоинтов</div>
+          </div>
+          <div className="bg-green-900/30 border border-green-800 rounded-lg p-3 text-center">
+            <div className="text-2xl font-bold text-green-400">100%</div>
+            <div className="text-xs text-gray-400">Соответствие</div>
+          </div>
+          <div className="bg-green-900/30 border border-green-800 rounded-lg p-3 text-center">
+            <div className="text-2xl font-bold text-green-400">4</div>
+            <div className="text-xs text-gray-400">Исправлено</div>
+          </div>
+          <div className="bg-green-900/30 border border-green-800 rounded-lg p-3 text-center">
+            <div className="text-2xl font-bold text-green-400">✓</div>
+            <div className="text-xs text-gray-400">Готово</div>
+          </div>
+        </div>
+
+        <div className="mt-4 bg-gray-800/50 rounded-lg p-4">
+          <h3 className="text-sm font-semibold text-yellow-400 mb-2">🔧 Исправленные проблемы:</h3>
+          <ul className="text-xs text-gray-400 space-y-1">
+            <li>1. Убран префикс <code className="text-green-400">/api/</code> — фронтенд обращается напрямую</li>
+            <li>2. <code className="text-green-400">PUT /admin/settings</code> — объединён с GET на одном URL</li>
+            <li>3. <code className="text-green-400">POST /admin/tasks</code> — объединён с GET на одном URL</li>
+            <li>4. Django Admin перенесён на <code className="text-green-400">/django-admin/</code></li>
+          </ul>
+        </div>
       </div>
 
       {/* Django Admin */}

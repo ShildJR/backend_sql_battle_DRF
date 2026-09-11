@@ -564,39 +564,39 @@ def admin_clear_assignment_view(request, user_id):
         }, status=status.HTTP_200_OK)
 
 
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
 @permission_classes([IsAdmin])
 def admin_tasks_view(request):
-    """GET /api/admin/tasks — Все задачи для админки"""
-    tasks = Task.objects.all()
-    serializer = AdminTaskSerializer(tasks, many=True)
-    return Response(serializer.data, status=status.HTTP_200_OK)
+    """
+    GET /admin/tasks — Все задачи для админки
+    POST /admin/tasks — Создать задачу (принимает camelCase expectedResult)
+    """
+    if request.method == 'GET':
+        tasks = Task.objects.all()
+        serializer = AdminTaskSerializer(tasks, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
+    elif request.method == 'POST':
+        serializer = CreateTaskSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-@api_view(['POST'])
-@permission_classes([IsAdmin])
-def admin_create_task_view(request):
-    """POST /api/admin/tasks — Создать задачу (принимает camelCase expectedResult)"""
-    serializer = CreateTaskSerializer(data=request.data)
-    if not serializer.is_valid():
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        data = serializer.validated_data
+        task = Task.objects.create(
+            title=data['title'],
+            description=data['description'],
+            difficulty=data['difficulty'],
+            points=data['points'],
+            schema=data['schema'],
+            tables=data['tables'],
+            expected_result=data.get('expectedResult', [])
+        )
 
-    data = serializer.validated_data
-    task = Task.objects.create(
-        title=data['title'],
-        description=data['description'],
-        difficulty=data['difficulty'],
-        points=data['points'],
-        schema=data['schema'],
-        tables=data['tables'],
-        expected_result=data.get('expectedResult', [])
-    )
-
-    return Response({
-        'id': task.id,
-        'title': task.title,
-        'success': True
-    }, status=status.HTTP_201_CREATED)
+        return Response({
+            'id': task.id,
+            'title': task.title,
+            'success': True
+        }, status=status.HTTP_201_CREATED)
 
 
 # ==========================================
@@ -796,20 +796,21 @@ _battle_settings = {
 }
 
 
-@api_view(['GET'])
+@api_view(['GET', 'PUT'])
 @permission_classes([IsAdmin])
 def admin_settings_view(request):
-    """GET /api/admin/settings — Получить настройки"""
-    return Response(_battle_settings, status=status.HTTP_200_OK)
-
-
-@api_view(['PUT'])
-@permission_classes([IsAdmin])
-def admin_settings_update_view(request):
-    """PUT /api/admin/settings — Обновить настройки"""
+    """
+    GET /admin/settings — Получить настройки
+    PUT /admin/settings — Обновить настройки
+    """
     global _battle_settings
-    if 'battle_start' in request.data:
-        _battle_settings['battle_start'] = request.data['battle_start']
-    if 'round_duration_minutes' in request.data:
-        _battle_settings['round_duration_minutes'] = request.data['round_duration_minutes']
-    return Response(_battle_settings, status=status.HTTP_200_OK)
+
+    if request.method == 'GET':
+        return Response(_battle_settings, status=status.HTTP_200_OK)
+
+    elif request.method == 'PUT':
+        if 'battle_start' in request.data:
+            _battle_settings['battle_start'] = request.data['battle_start']
+        if 'round_duration_minutes' in request.data:
+            _battle_settings['round_duration_minutes'] = request.data['round_duration_minutes']
+        return Response(_battle_settings, status=status.HTTP_200_OK)
