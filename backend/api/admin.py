@@ -272,7 +272,7 @@ class UserGroupAdmin(admin.ModelAdmin):
 
 @admin.register(BattleSettings)
 class BattleSettingsAdmin(admin.ModelAdmin):
-    list_display = ('battle_start', 'battle_end', 'round_duration_minutes', 'is_active', 'updated_at')
+    list_display = ('battle_start', 'round_duration_minutes', 'updated_at')
 
     def has_add_permission(self, request):
         # Singleton — не даём создавать вторую запись через админку
