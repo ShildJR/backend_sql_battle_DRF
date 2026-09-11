@@ -250,7 +250,7 @@ def submit_solution_view(request, task_id):
         tables_data=task.tables
     )
     execution_time_ms = int((time.time() - start_time) * 1000)
-
+    
     # Используем время от фронтенда если оно больше (включает время написания)
     if time_spent > 0:
         execution_time_ms = max(execution_time_ms, int(time_spent * 1000))
@@ -356,7 +356,7 @@ def get_leaderboard_data():
             'totalPoints': user.total_points,
             'solvedTasks': solved_count,
             'total_time_spent': total_time_seconds,  # Новое поле
-            'totalTimeSpent': total_time_seconds,  # Для обратной совместимости
+            'totalTimeSpent': total_time_seconds,    # Для обратной совместимости
             'avgTime': round(total_time_seconds / max(solved_count, 1), 2),  # Старое поле
             'avatar': avatar
         })
@@ -449,11 +449,11 @@ def admin_users_view(request):
 def admin_assign_task_view(request, user_id):
     """
     POST /admin/users/{user_id}/assign — Назначить задачу(и) пользователю
-
+    
     Поддерживает два формата:
     1. Одиночная задача: {"taskId": 3}
     2. Массовое назначение: {"task_ids": [1, 2, 3]}
-
+    
     При назначении автоматически устанавливаются:
     - started_at: текущее время + 1 минута
     - completed_at: текущее время + 24 часа
@@ -477,7 +477,7 @@ def admin_assign_task_view(request, user_id):
 
         task_ids = serializer.validated_data['task_ids']
         tasks = Task.objects.filter(id__in=task_ids)
-
+        
         if tasks.count() != len(task_ids):
             found_ids = set(tasks.values_list('id', flat=True))
             missing_ids = set(task_ids) - found_ids
@@ -537,7 +537,7 @@ def admin_assign_task_view(request, user_id):
 def admin_clear_assignment_view(request, user_id):
     """
     POST /admin/users/{user_id}/clear — Снять назначение(я)
-
+    
     Поддерживает два формата:
     1. Снять все задачи: {} (пустое тело)
     2. Снять конкретную задачу: {"taskId": 3}
@@ -621,7 +621,7 @@ def admin_create_group_view(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     data = serializer.validated_data
-
+    
     # Проверяем уникальность имени
     if UserGroup.objects.filter(name=data['name']).exists():
         return Response(
@@ -697,9 +697,9 @@ def admin_group_detail_view(request, group_id):
 def admin_assign_tasks_to_group_view(request, group_id):
     """
     POST /admin/groups/{id}/assign — Назначить задачи всем пользователям группы
-
+    
     Request: {"task_ids": [1, 2, 3]}
-
+    
     При назначении автоматически устанавливаются:
     - started_at: текущее время + 1 минута
     - completed_at: текущее время + 24 часа
@@ -759,7 +759,7 @@ def admin_assign_tasks_to_group_view(request, group_id):
 def admin_clear_group_assignments_view(request, group_id):
     """
     POST /admin/groups/{id}/clear — Снять все назначения у пользователей группы
-
+    
     Request (опционально): {"task_ids": [1, 2]} — если указаны, снимает только эти задачи
     """
     try:
@@ -768,7 +768,7 @@ def admin_clear_group_assignments_view(request, group_id):
         return Response({'detail': 'Group not found'}, status=status.HTTP_404_NOT_FOUND)
 
     users = group.users.all()
-
+    
     if 'task_ids' in request.data:
         task_ids = request.data['task_ids']
         deleted_count, _ = TaskAssignment.objects.filter(
