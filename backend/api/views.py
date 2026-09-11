@@ -9,7 +9,7 @@ from django.db.models import Avg, Q, Count, Sum
 from django.utils import timezone
 from datetime import timedelta
 
-from .models import User, Task, Submission, TaskAssignment, UserGroup
+from .models import User, Task, Submission, TaskAssignment, UserGroup, BattleSettings
 from .serializers import (
     RegisterSerializer, LoginSerializer, UserSerializer, UserProfileSerializer,
     TaskListSerializer, TaskDetailSerializer, AdminTaskSerializer, CreateTaskSerializer,
@@ -789,12 +789,6 @@ def admin_clear_group_assignments_view(request, group_id):
 # 9. НАСТРОЙКИ (есть во фронтенде api.ts!)
 # ==========================================
 
-# Хранилище настроек (в памяти, для простоты)
-_battle_settings = {
-    'battle_start': '2026-09-15T10:00:00Z',
-    'round_duration_minutes': 120
-}
-
 
 @api_view(['GET', 'PUT'])
 @permission_classes([IsAdmin])
@@ -803,14 +797,22 @@ def admin_settings_view(request):
     GET /admin/settings — Получить настройки
     PUT /admin/settings — Обновить настройки
     """
-    global _battle_settings
+    settings = BattleSettings.get_settings()
 
     if request.method == 'GET':
-        return Response(_battle_settings, status=status.HTTP_200_OK)
+        return Response({
+            'battle_start': settings.battle_start.isoformat() if settings.battle_start else None,
+            'round_duration_minutes': settings.round_duration_minutes
+        }, status=status.HTTP_200_OK)
 
     elif request.method == 'PUT':
         if 'battle_start' in request.data:
-            _battle_settings['battle_start'] = request.data['battle_start']
+            settings.battle_start = request.data['battle_start']
         if 'round_duration_minutes' in request.data:
-            _battle_settings['round_duration_minutes'] = request.data['round_duration_minutes']
-        return Response(_battle_settings, status=status.HTTP_200_OK)
+            settings.round_duration_minutes = request.data['round_duration_minutes']
+        settings.save()
+        
+        return Response({
+            'battle_start': settings.battle_start.isoformat() if settings.battle_start else None,
+            'round_duration_minutes': settings.round_duration_minutes
+        }, status=status.HTTP_200_OK)

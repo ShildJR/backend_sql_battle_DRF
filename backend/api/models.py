@@ -118,3 +118,35 @@ class UserGroup(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.users.count()} пользователей)"
+
+
+class BattleSettings(models.Model):
+    """Настройки баттла (синглтон)"""
+    battle_start = models.DateTimeField(
+        default='2026-09-15T10:00:00Z',
+        verbose_name='Начало баттла'
+    )
+    round_duration_minutes = models.IntegerField(
+        default=120,
+        verbose_name='Длительность раунда (минуты)'
+    )
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
+
+    class Meta:
+        verbose_name = 'Настройки баттла'
+        verbose_name_plural = 'Настройки баттла'
+
+    def __str__(self):
+        return f"Настройки баттла (обновлено: {self.updated_at})"
+
+    @classmethod
+    def get_settings(cls):
+        """Получить или создать настройки (синглтон)"""
+        settings, created = cls.objects.get_or_create(
+            id=1,
+            defaults={
+                'battle_start': '2026-09-15T10:00:00Z',
+                'round_duration_minutes': 120
+            }
+        )
+        return settings
