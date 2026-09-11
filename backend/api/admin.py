@@ -8,15 +8,12 @@ from .forms import BulkAssignForm, CreateGroupForm, EditGroupForm
 
 
 @admin.register(User)
-class UserAdmin(admin.ModelAdmin):
+class UserAdmin(BaseUserAdmin):
     list_display = ['username', 'email', 'role', 'rating', 'total_points', 'is_active']
     list_filter = ['role', 'is_active', 'is_staff']
-    fieldsets = admin.ModelAdmin.fieldsets + (
+    fieldsets = BaseUserAdmin.fieldsets + (
         ('SQL Battle', {'fields': ('rating', 'total_points', 'role')}),
     )
-    
-    def get_queryset(self, request):
-        return super().get_queryset(request).select_related()
 
 
 @admin.register(Task)
