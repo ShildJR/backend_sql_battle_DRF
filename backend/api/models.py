@@ -80,10 +80,18 @@ class Submission(models.Model):
 
 
 class TaskAssignment(models.Model):
-    """Назначение задачи участнику (теперь поддерживает несколько задач на пользователя)"""
+    """
+    Назначение задачи участнику.
+
+    Поля:
+    - assigned_at  — когда назначили (auto)
+    - started_at   — с какого момента задача доступна пользователю
+    - deadline     — до какого момента задача должна быть решена (дедлайн)
+    - completed_at — когда пользователь реально решил задачу (NULL = не решена)
+    """
     user = models.ForeignKey(
         User, on_delete=models.CASCADE,
-        related_name='assignments',  # Изменено с 'assignment' на 'assignments'
+        related_name='assignments',
         verbose_name='Пользователь'
     )
     task = models.ForeignKey(
@@ -92,13 +100,14 @@ class TaskAssignment(models.Model):
         verbose_name='Задача'
     )
     assigned_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата назначения')
-    started_at = models.DateTimeField(null=True, blank=True, verbose_name='Дата начала')
+    started_at = models.DateTimeField(null=True, blank=True, verbose_name='Доступна с')
+    deadline = models.DateTimeField(null=True, blank=True, verbose_name='Дедлайн')
     completed_at = models.DateTimeField(null=True, blank=True, verbose_name='Дата завершения')
 
     class Meta:
         verbose_name = 'Назначение задачи'
         verbose_name_plural = 'Назначения задач'
-        unique_together = ['user', 'task']  # Один пользователь не может иметь одну задачу дважды
+        unique_together = ['user', 'task']
 
     def __str__(self):
         return f"{self.user.username} → {self.task.title}"
