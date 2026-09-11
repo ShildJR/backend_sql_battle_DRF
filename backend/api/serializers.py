@@ -137,23 +137,72 @@ class SubmitSolutionSerializer(serializers.Serializer):
 class AdminUserSerializer(serializers.ModelSerializer):
     """Пользователи для админки — camelCase"""
     totalPoints = serializers.IntegerField(source='total_points', read_only=True)
-    assignedTaskId = serializers.SerializerMethodField()
+    assignedTaskId = serializers.SerializerMethodField()  # Для обратной совместимости
+    assignedTaskIds = serializers.SerializerMethodField()  # Новый формат — список
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'rating', 'totalPoints', 'assignedTaskId']
+        fields = ['id', 'username', 'email', 'rating', 'totalPoints', 'assignedTaskId', 'assignedTaskIds']
 
     def get_assignedTaskId(self, obj):
-        try:
-            assignment = obj.assignment
-            return assignment.task_id
-        except TaskAssignment.DoesNotExist:
-            return None
+        # Возвращает ID первой назначенной задачи (для обратной совместимости)
+        assignment = obj.assignments.filter(completed_at__isnull=True).first()
+        return assignment.task_id if assignment else None
+
+    def get_assignedTaskIds(self, obj):
+        # Возвращает список ID всех назначенных задач
+        return list(
+            obj.assignments.filter(completed_at__isnull=True)
+            .values_list('task_id', flat=True)
+        )
 
 
 class AssignTaskSerializer(serializers.Serializer):
     """Назначение задачи — принимает camelCase taskId"""
     taskId = serializers.IntegerField()
+
+
+class BulkAssignTasksSerializer(serializers.Serializer):
+    """Массовое назначение задач пользователю"""
+    task_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        min_length=1,
+        help_text="Список ID задач для назначения"
+    )
+
+
+class AssignTasksToGroupSerializer(serializers.Serializer):
+    """Назначение задач группе пользователей"""
+    task_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        min_length=1,
+        help_text="Список ID задач для назначения"
+    )
+
+
+class UserGroupSerializer(serializers.ModelSerializer):
+    """Сериализатор для группы пользователей"""
+    user_count = serializers.SerializerMethodField()
+    users = UserSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = UserGroup
+        fields = ['id', 'name', 'description', 'user_count', 'users', 'created_at']
+
+    def get_user_count(self, obj):
+        return obj.users.count()
+
+
+class UserGroupCreateSerializer(serializers.Serializer):
+    """Создание группы пользователей"""
+    name = serializers.CharField(max_length=100)
+    description = serializers.CharField(required=False, allow_blank=True, default='')
+    user_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        default=list,
+        help_text="Список ID пользователей для добавления в группу"
+    )
 
 
 class LeaderboardEntrySerializer(serializers.Serializer):

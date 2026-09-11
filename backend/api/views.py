@@ -5,7 +5,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.db.models import Avg, Q, Count, Sum
+from django.db.models import Avg, Q, Count
 
 from .models import User, Task, Submission, TaskAssignment
 from .serializers import (
@@ -137,9 +137,9 @@ def profile_history_view(request):
 # ==========================================
 
 @api_view(['GET'])
-@permission_classes([AllowAny])  # Изменено с IsAuthenticated на AllowAny
+@permission_classes([IsAuthenticated])
 def task_list_view(request):
-    """GET /tasks — Список задач (с полем status)"""
+    """GET /api/tasks — Список задач (с полем status)"""
     tasks = Task.objects.all()
     serializer = TaskListSerializer(tasks, many=True, context={'request': request})
     return Response(serializer.data, status=status.HTTP_200_OK)
@@ -220,7 +220,6 @@ def submit_solution_view(request, task_id):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     query = serializer.validated_data['query']
-    time_spent = serializer.validated_data.get('time_spent', 0)  # Время от фронтенда в секундах
     user = request.user
 
     # Валидация запроса
@@ -228,8 +227,7 @@ def submit_solution_view(request, task_id):
         # Сохраняем неправильную попытку
         Submission.objects.create(
             user=user, task=task, query=query,
-            is_correct=False, points_earned=0,
-            execution_time_ms=int(time_spent * 1000) if time_spent else None
+            is_correct=False, points_earned=0
         )
         return Response({
             'is_correct': False,
@@ -246,10 +244,6 @@ def submit_solution_view(request, task_id):
         tables_data=task.tables
     )
     execution_time_ms = int((time.time() - start_time) * 1000)
-
-    # Используем время от фронтенда если оно больше (включает время написания)
-    if time_spent > 0:
-        execution_time_ms = max(execution_time_ms, int(time_spent * 1000))
 
     if not success:
         # Ошибка выполнения
@@ -338,12 +332,11 @@ def get_leaderboard_data():
             user=user, is_correct=True
         ).values('task_id').distinct().count()
 
-        # Считаем общее время, потраченное на все правильные решения
-        total_time_ms = Submission.objects.filter(
+        avg_time = Submission.objects.filter(
             user=user, is_correct=True, execution_time_ms__isnull=False
-        ).aggregate(total=Sum('execution_time_ms'))['total']
+        ).aggregate(avg=Avg('execution_time_ms'))['avg']
 
-        total_time_seconds = round((total_time_ms or 0) / 1000, 2)
+        avg_time_seconds = round((avg_time or 0) / 1000, 2)
         avatar = user.username[:2].upper() if user.username else '??'
 
         result.append({
@@ -351,9 +344,7 @@ def get_leaderboard_data():
             'username': user.username,
             'totalPoints': user.total_points,
             'solvedTasks': solved_count,
-            'total_time_spent': total_time_seconds,  # Новое поле
-            'totalTimeSpent': total_time_seconds,  # Для обратной совместимости
-            'avgTime': round(total_time_seconds / max(solved_count, 1), 2),  # Старое поле
+            'avgTime': avg_time_seconds,
             'avatar': avatar
         })
 
