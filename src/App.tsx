@@ -108,29 +108,55 @@ function CodeBlock({ code, id, copyCode, copiedCode, language = 'bash' }: {
 }
 
 function DiagnosisTab({ copyCode, copiedCode }: { copyCode: (code: string, id: string) => void; copiedCode: string | null }) {
-  const frontendFix = `// lib/api.ts — добавить в конец файла (секция 2. ПРОФИЛЬ)
+  const frontendFix = `// lib/api.ts — изменения в бэкенде для совместимости с фронтендом
 
-export async function getUserSubmissionHistory() {
-    if (USE_MOCKS) {
-        await delay(300);
-        // Мок: возвращаем историю на основе решённых задач
-        return mockTasks
-            .filter(t => t.userResult)
-            .map(t => ({
-                id: t.id,
-                task_title: t.title,
-                difficulty: t.difficulty,
-                execution_time: t.userResult?.execution_time || 0,
-                is_correct: true,
-                points_earned: t.userResult?.points_earned || 0
-            }));
-    }
-
-    const res = await fetch(\`\${API_BASE_URL}/profile/history\`, {
-        headers: getAuthHeaders()
+// 1. submitSolution теперь принимает time_spent
+export async function submitSolution(taskId: number, query: string, timeSpent: number) {
+    const res = await fetch(\`\${API_BASE_URL}/tasks/\${taskId}/submit\`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ query, time_spent: timeSpent })
     });
-    if (!res.ok) throw new Error("Failed to fetch submission history");
     return res.json();
+}
+
+// 2. getLeaderboard теперь ожидает total_time_spent
+export async function getLeaderboard() {
+    const res = await fetch(\`\${API_BASE_URL}/leaderboard\`);
+    const data = await res.json();
+    return data.map((entry: any) => ({
+        rank: entry.rank,
+        username: entry.username,
+        avatar: entry.avatar,
+        totalPoints: entry.total_points ?? entry.totalPoints ?? 0,
+        solvedTasks: entry.solved_tasks ?? entry.solvedTasks ?? 0,
+        totalTimeSpent: entry.total_time_spent ?? entry.totalTimeSpent ?? 0,
+    }));
+}
+
+// 3. getUserProfile поддерживает оба формата
+export async function getUserProfile() {
+    const res = await fetch(\`\${API_BASE_URL}/profile\`, { headers: getAuthHeaders() });
+    const data = await res.json();
+    return {
+        id: data.id,
+        username: data.username,
+        email: data.email,
+        rating: data.rating ?? 0,
+        totalPoints: data.total_points ?? data.totalPoints ?? 0,
+        solvedTasks: data.solved_tasks ?? data.solvedTasks ?? [],
+        role: data.role ?? "participant",
+    };
+}
+
+// 4. WebSocket URL без /api
+export function connectLeaderboardWebSocket(onUpdate: (data: any[]) => void) {
+    const token = localStorage.getItem("sql_battle_token");
+    const wsBaseUrl = API_BASE_URL.replace('http://', 'ws://').replace('/api', '');
+    const tokenQuery = token ? \`?token=\${encodeURIComponent(token)}\` : "";
+    const wsUrl = \`\${wsBaseUrl}/ws/leaderboard\${tokenQuery}\`;
+    const ws = new WebSocket(wsUrl);
+    // ...
 }`
 
   const backendView = `# backend/api/views.py — добавить после profile_view
@@ -178,13 +204,122 @@ path('profile/history', views.profile_history_view, name='profile-history'),`
   return (
     <div className="space-y-6">
       {/* Заголовок */}
-      <div className="bg-gradient-to-r from-red-500/10 to-orange-500/10 border border-red-500/20 rounded-xl p-6">
-        <h2 className="text-2xl font-bold mb-2">🔍 Диагностика: страница /profile не загружается</h2>
+      <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-xl p-6">
+        <h2 className="text-2xl font-bold mb-2">🆕 Последние изменения в бэкенде</h2>
         <p className="text-gray-300">
-          Проблема: фронтенд вызывает <code className="text-red-400">getUserSubmissionHistory()</code>, 
-          но эта функция не определена в <code className="text-red-400">lib/api.ts</code>, 
-          а эндпоинт <code className="text-red-400">/api/profile/history</code> отсутствует в бэкенде.
+          Бэкенд обновлён для полной совместимости с изменениями во фронтенде:
         </p>
+        <ul className="mt-3 space-y-1 text-sm text-gray-400">
+          <li>✅ Убран префикс <code className="text-green-400">/api</code> — запросы идут напрямую</li>
+          <li>✅ Добавлен <code className="text-green-400">time_spent</code> в submit решения</li>
+          <li>✅ Лидерборд возвращает <code className="text-green-400">total_time_spent</code></li>
+          <li>✅ Профиль возвращает оба формата: <code className="text-green-400">totalPoints</code> и <code className="text-green-400">total_points</code></li>
+          <li>✅ <code className="text-green-400">/tasks</code> доступен без авторизации</li>
+        </ul>
+      </div>
+
+      {/* Изменения */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <span className="text-blue-400">📝</span> Что изменилось в бэкенде
+        </h3>
+        <div className="space-y-4">
+          <div className="bg-blue-950/30 border border-blue-900/50 rounded-lg p-4">
+            <p className="text-sm text-blue-300 font-semibold mb-2">1. Убран префикс /api</p>
+            <p className="text-xs text-gray-400 mb-2">Файл: <code className="text-green-400">backend/sql_battle/urls.py</code></p>
+            <CodeBlock 
+              code={`# Было:
+path('api/', include('api.urls')),
+
+# Стало:
+path('', include('api.urls')),  # Без префикса`}
+              id="change-urls"
+              copyCode={copyCode}
+              copiedCode={copiedCode}
+              language="python"
+            />
+          </div>
+
+          <div className="bg-blue-950/30 border border-blue-900/50 rounded-lg p-4">
+            <p className="text-sm text-blue-300 font-semibold mb-2">2. Submit принимает time_spent</p>
+            <p className="text-xs text-gray-400 mb-2">Файл: <code className="text-green-400">backend/api/serializers.py</code></p>
+            <CodeBlock 
+              code={`class SubmitSolutionSerializer(serializers.Serializer):
+    query = serializers.CharField()
+    time_spent = serializers.FloatField(required=False, default=0)  # NEW`}
+              id="change-serializer"
+              copyCode={copyCode}
+              copiedCode={copiedCode}
+              language="python"
+            />
+          </div>
+
+          <div className="bg-blue-950/30 border border-blue-900/50 rounded-lg p-4">
+            <p className="text-sm text-blue-300 font-semibold mb-2">3. Лидерборд возвращает total_time_spent</p>
+            <p className="text-xs text-gray-400 mb-2">Файл: <code className="text-green-400">backend/api/views.py</code></p>
+            <CodeBlock 
+              code={`# Считаем общее время на все правильные решения
+total_time_ms = Submission.objects.filter(
+    user=user, is_correct=True
+).aggregate(total=Sum('execution_time_ms'))['total']
+
+result.append({
+    'rank': rank,
+    'username': user.username,
+    'totalPoints': user.total_points,
+    'solvedTasks': solved_count,
+    'total_time_spent': total_time_seconds,  # NEW
+    'totalTimeSpent': total_time_seconds,    # NEW (camelCase)
+    'avgTime': ...,  # OLD (для совместимости)
+    'avatar': avatar
+})`}
+              id="change-leaderboard"
+              copyCode={copyCode}
+              copiedCode={copiedCode}
+              language="python"
+            />
+          </div>
+
+          <div className="bg-blue-950/30 border border-blue-900/50 rounded-lg p-4">
+            <p className="text-sm text-blue-300 font-semibold mb-2">4. Профиль возвращает оба формата</p>
+            <p className="text-xs text-gray-400 mb-2">Файл: <code className="text-green-400">backend/api/serializers.py</code></p>
+            <CodeBlock 
+              code={`class UserProfileSerializer(serializers.ModelSerializer):
+    totalPoints = serializers.IntegerField(source='total_points', read_only=True)
+    total_points = serializers.IntegerField(read_only=True)  # NEW
+    solvedTasks = serializers.SerializerMethodField()
+    solved_tasks = serializers.SerializerMethodField()  # NEW
+    
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'rating', 
+                  'totalPoints', 'total_points',  # Оба формата
+                  'rank', 'solvedTasks', 'solved_tasks', 'role']`}
+              id="change-profile"
+              copyCode={copyCode}
+              copiedCode={copiedCode}
+              language="python"
+            />
+          </div>
+
+          <div className="bg-blue-950/30 border border-blue-900/50 rounded-lg p-4">
+            <p className="text-sm text-blue-300 font-semibold mb-2">5. /tasks доступен без авторизации</p>
+            <p className="text-xs text-gray-400 mb-2">Файл: <code className="text-green-400">backend/api/views.py</code></p>
+            <CodeBlock 
+              code={`@api_view(['GET'])
+@permission_classes([AllowAny])  # Было: IsAuthenticated
+def task_list_view(request):
+    """GET /tasks — Список задач (публичный)"""
+    tasks = Task.objects.all()
+    serializer = TaskListSerializer(tasks, many=True, context={'request': request})
+    return Response(serializer.data, status=status.HTTP_200_OK)`}
+              id="change-tasks-public"
+              copyCode={copyCode}
+              copiedCode={copiedCode}
+              language="python"
+            />
+          </div>
+        </div>
       </div>
 
       {/* Причина */}
@@ -652,25 +787,61 @@ function EndpointsTab({ copyCode, copiedCode }: { copyCode: (code: string, id: s
       ]
     },
     {
-      section: '👥 Админка',
+      section: '👤 Пользователь — Задачи',
       items: [
-        { method: 'GET', path: '/api/admin/users', desc: 'Все пользователи', auth: true, admin: true,
-          response: '[{"id": 1, "username": "ivan.petrov", "email": "ivan@cdek.digital", "rating": 1250, "totalPoints": 450, "assignedTaskId": 3}]' },
-        { method: 'POST', path: '/api/admin/users/{id}/assign', desc: 'Назначить задачу', auth: true, admin: true,
-          body: '{"taskId": 3}',
-          response: '{"success": true, "message": "Задача назначена"}' },
-        { method: 'POST', path: '/api/admin/users/{id}/clear', desc: 'Снять назначение', auth: true, admin: true,
-          response: '{"success": true, "message": "Назначение снято"}' },
-        { method: 'GET', path: '/api/user/assigned-task', desc: 'Назначенная задача', auth: true,
+        { method: 'GET', path: '/user/assigned-tasks', desc: 'Все назначенные задачи', auth: true,
+          response: '[{"id": 1, "title": "...", "difficulty": "easy", "points": 100, "solved": false, "assigned_at": "..."}]' },
+        { method: 'GET', path: '/user/assigned-task', desc: 'Первая задача (совместимость)', auth: true,
           response: '{"id": 3, "title": "Анализ заказов", "difficulty": "hard", "points": 500}' },
-        { method: 'GET', path: '/api/admin/tasks', desc: 'Все задачи (админ)', auth: true, admin: true,
+      ]
+    },
+    {
+      section: '👥 Админка — Пользователи',
+      items: [
+        { method: 'GET', path: '/admin/users', desc: 'Все пользователи', auth: true, admin: true,
+          response: '[{"id": 1, "username": "ivan", "totalPoints": 450, "assignedTaskId": 3, "assignedTaskIds": [1, 2, 3]}]' },
+        { method: 'POST', path: '/admin/users/{id}/assign', desc: 'Назначить задачу(и)', auth: true, admin: true,
+          body: '{"taskId": 3} или {"task_ids": [1, 2, 3]}',
+          response: '{"success": true, "message": "Назначено задач: 3", "assigned_count": 3}' },
+        { method: 'POST', path: '/admin/users/{id}/clear', desc: 'Снять назначение', auth: true, admin: true,
+          body: '{} (все) или {"taskId": 3} (конкретная)',
+          response: '{"success": true, "message": "Все назначения сняты"}' },
+      ]
+    },
+    {
+      section: '👥 Админка — Группы',
+      items: [
+        { method: 'GET', path: '/admin/groups', desc: 'Список групп', auth: true, admin: true,
+          response: '[{"id": 1, "name": "Команда А", "user_count": 5, "users": [...]}]' },
+        { method: 'POST', path: '/admin/groups/create', desc: 'Создать группу', auth: true, admin: true,
+          body: '{"name": "Команда А", "description": "...", "user_ids": [1, 2, 3]}',
+          response: '{"id": 1, "name": "Команда А", "success": true}' },
+        { method: 'GET', path: '/admin/groups/{id}', desc: 'Детали группы', auth: true, admin: true,
+          response: '{"id": 1, "name": "Команда А", "user_count": 5, "users": [...]}' },
+        { method: 'PUT', path: '/admin/groups/{id}', desc: 'Обновить группу', auth: true, admin: true,
+          body: '{"name": "Новое имя", "user_ids": [1, 2, 3, 4]}',
+          response: '{"id": 1, "name": "Новое имя", "success": true}' },
+        { method: 'DELETE', path: '/admin/groups/{id}', desc: 'Удалить группу', auth: true, admin: true,
+          response: '{"success": true, "message": "Группа удалена"}' },
+        { method: 'POST', path: '/admin/groups/{id}/assign', desc: 'Назначить задачи группе', auth: true, admin: true,
+          body: '{"task_ids": [1, 2, 3]}',
+          response: '{"success": true, "assigned_count": 15, "users_count": 5, "tasks_count": 3}' },
+        { method: 'POST', path: '/admin/groups/{id}/clear', desc: 'Снять назначения группы', auth: true, admin: true,
+          body: '{} (все) или {"task_ids": [1, 2]}',
+          response: '{"success": true, "deleted_count": 10}' },
+      ]
+    },
+    {
+      section: '🎮 Админка — Задачи и настройки',
+      items: [
+        { method: 'GET', path: '/admin/tasks', desc: 'Все задачи (админ)', auth: true, admin: true,
           response: '[{"id": 1, "title": "...", "expectedResult": [...]}]' },
-        { method: 'POST', path: '/api/admin/tasks', desc: 'Создать задачу', auth: true, admin: true,
+        { method: 'POST', path: '/admin/tasks', desc: 'Создать задачу', auth: true, admin: true,
           body: '{"title": "...", "description": "...", "difficulty": "medium", "points": 250, "schema": "...", "tables": [...], "expectedResult": [...]}',
           response: '{"id": 10, "title": "Новая задача", "success": true}' },
-        { method: 'GET', path: '/api/admin/settings', desc: 'Настройки', auth: true, admin: true,
+        { method: 'GET', path: '/admin/settings', desc: 'Настройки', auth: true, admin: true,
           response: '{"battle_start": "2026-09-15T10:00:00Z", "round_duration_minutes": 120}' },
-        { method: 'PUT', path: '/api/admin/settings', desc: 'Обновить настройки', auth: true, admin: true,
+        { method: 'PUT', path: '/admin/settings', desc: 'Обновить настройки', auth: true, admin: true,
           body: '{"battle_start": "2026-09-15T10:00:00Z", "round_duration_minutes": 90}' },
       ]
     },
