@@ -168,13 +168,33 @@ backend/
 | GET | `/leaderboard` | `{ total_time_spent, totalTimeSpent, avgTime }` |
 | WS | `/ws/leaderboard/?token=...` | Реалтайм обновления |
 
-### Админка
+### Пользователь
 | Метод | URL | Описание |
 |-------|-----|----------|
-| GET | `/admin/users` | `{ assignedTaskId }` |
-| POST | `/admin/users/{id}/assign` | `{ taskId }` |
-| POST | `/admin/users/{id}/clear` | Снять назначение |
-| GET | `/user/assigned-task` | Для лобби |
+| GET | `/user/assigned-tasks` | Все назначенные задачи (массив) |
+| GET | `/user/assigned-task` | Первая назначенная задача (совместимость) |
+
+### Админка — Пользователи
+| Метод | URL | Описание |
+|-------|-----|----------|
+| GET | `/admin/users` | `{ assignedTaskId, assignedTaskIds }` |
+| POST | `/admin/users/{id}/assign` | Назначить задачу(и): `{taskId}` или `{task_ids: [1,2,3]}` |
+| POST | `/admin/users/{id}/clear` | Снять: `{taskId}` или все |
+
+### Админка — Группы
+| Метод | URL | Описание |
+|-------|-----|----------|
+| GET | `/admin/groups` | Список всех групп |
+| POST | `/admin/groups/create` | Создать группу: `{name, description, user_ids}` |
+| GET | `/admin/groups/{id}` | Детали группы |
+| PUT | `/admin/groups/{id}` | Обновить группу |
+| DELETE | `/admin/groups/{id}` | Удалить группу |
+| POST | `/admin/groups/{id}/assign` | Назначить задачи группе: `{task_ids: [1,2,3]}` |
+| POST | `/admin/groups/{id}/clear` | Снять назначения группы |
+
+### Админка — Задачи и настройки
+| Метод | URL | Описание |
+|-------|-----|----------|
 | GET | `/admin/tasks` | Все задачи |
 | POST | `/admin/tasks` | Создать задачу |
 | GET | `/admin/settings` | Настройки баттла |
@@ -190,6 +210,71 @@ Authorization: Bearer <token>
 WebSocket — токен в query-параметре:
 ```
 ws://localhost:8000/ws/leaderboard?token=<jwt_token>
+```
+
+## 📋 Примеры использования
+
+### Массовое назначение задач пользователю
+
+```bash
+# Назначить одну задачу
+POST /admin/users/1/assign
+{"taskId": 3}
+
+# Назначить несколько задач сразу
+POST /admin/users/1/assign
+{"task_ids": [1, 2, 3, 5]}
+```
+
+### Работа с группами
+
+```bash
+# Создать группу
+POST /admin/groups/create
+{
+  "name": "Команда А",
+  "description": "Первая команда участников",
+  "user_ids": [1, 2, 3, 4]
+}
+
+# Назначить задачи всей группе
+POST /admin/groups/1/assign
+{"task_ids": [1, 2, 3]}
+
+# Снять все назначения у группы
+POST /admin/groups/1/clear
+{}
+
+# Снять конкретные задачи у группы
+POST /admin/groups/1/clear
+{"task_ids": [1, 2]}
+```
+
+### Получение назначенных задач
+
+```bash
+# Получить все назначенные задачи (массив)
+GET /user/assigned-tasks
+Response: [
+  {
+    "id": 1,
+    "title": "Задача 1",
+    "difficulty": "easy",
+    "points": 100,
+    "solved": false,
+    "assigned_at": "2026-09-10T10:00:00Z"
+  },
+  ...
+]
+
+# Получить первую задачу (для совместимости)
+GET /user/assigned-task
+Response: {
+  "id": 1,
+  "title": "Задача 1",
+  "difficulty": "easy",
+  "points": 100
+}
 ```
 
 ## 🛡️ Безопасность
