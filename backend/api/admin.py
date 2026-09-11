@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.shortcuts import render, redirect
 from django.urls import path
 from django.contrib import messages
