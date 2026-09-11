@@ -80,10 +80,10 @@ class Submission(models.Model):
 
 
 class TaskAssignment(models.Model):
-    """Назначение задачи участнику"""
-    user = models.OneToOneField(
+    """Назначение задачи участнику (теперь поддерживает несколько задач на пользователя)"""
+    user = models.ForeignKey(
         User, on_delete=models.CASCADE,
-        related_name='assignment',
+        related_name='assignments',  # Изменено с 'assignment' на 'assignments'
         verbose_name='Пользователь'
     )
     task = models.ForeignKey(
@@ -98,6 +98,23 @@ class TaskAssignment(models.Model):
     class Meta:
         verbose_name = 'Назначение задачи'
         verbose_name_plural = 'Назначения задач'
+        unique_together = ['user', 'task']  # Один пользователь не может иметь одну задачу дважды
 
     def __str__(self):
         return f"{self.user.username} → {self.task.title}"
+
+
+class UserGroup(models.Model):
+    """Группа пользователей для массового назначения задач"""
+    name = models.CharField(max_length=100, unique=True, verbose_name='Название группы')
+    description = models.TextField(blank=True, verbose_name='Описание')
+    users = models.ManyToManyField(User, related_name='user_groups', blank=True, verbose_name='Пользователи')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
+
+    class Meta:
+        verbose_name = 'Группа пользователей'
+        verbose_name_plural = 'Группы пользователей'
+        ordering = ['name']
+
+    def __str__(self):
+        return f"{self.name} ({self.users.count()} пользователей)"

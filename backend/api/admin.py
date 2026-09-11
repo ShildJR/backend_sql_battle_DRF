@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import User, Task, Submission, TaskAssignment
+from .models import User, Task, Submission, TaskAssignment, UserGroup
 
 
 @admin.register(User)
@@ -31,3 +31,14 @@ class TaskAssignmentAdmin(admin.ModelAdmin):
     list_display = ['user', 'task', 'assigned_at', 'started_at', 'completed_at']
     list_filter = ['task']
     search_fields = ['user__username']
+
+
+@admin.register(UserGroup)
+class UserGroupAdmin(admin.ModelAdmin):
+    list_display = ['name', 'description', 'user_count', 'created_at']
+    search_fields = ['name']
+    filter_horizontal = ['users']
+
+    def user_count(self, obj):
+        return obj.users.count()
+    user_count.short_description = 'Количество пользователей'
