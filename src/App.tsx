@@ -822,21 +822,21 @@ function EndpointsTab({ copyCode, copiedCode }: { copyCode: (code: string, id: s
     {
       section: '👤 Пользователь — Задачи',
       items: [
-        { method: 'GET', path: '/user/assigned-tasks', desc: 'Все назначенные задачи', auth: true,
+        { method: 'GET', path: '/api/user/assigned-tasks', desc: 'Все назначенные задачи', auth: true,
           response: '[{"id": 1, "title": "...", "difficulty": "easy", "points": 100, "solved": false, "assigned_at": "..."}]' },
-        { method: 'GET', path: '/user/assigned-task', desc: 'Первая задача (совместимость)', auth: true,
+        { method: 'GET', path: '/api/user/assigned-task', desc: 'Первая задача (совместимость)', auth: true,
           response: '{"id": 3, "title": "Анализ заказов", "difficulty": "hard", "points": 500}' },
       ]
     },
     {
       section: '👥 Админка — Пользователи',
       items: [
-        { method: 'GET', path: '/admin/users', desc: 'Все пользователи', auth: true, admin: true,
+        { method: 'GET', path: '/api/admin/users', desc: 'Все пользователи', auth: true, admin: true,
           response: '[{"id": 1, "username": "ivan", "totalPoints": 450, "assignedTaskId": 3, "assignedTaskIds": [1, 2, 3]}]' },
-        { method: 'POST', path: '/admin/users/{id}/assign', desc: 'Назначить задачу(и)', auth: true, admin: true,
+        { method: 'POST', path: '/api/admin/users/{id}/assign', desc: 'Назначить задачу(и)', auth: true, admin: true,
           body: '{"taskId": 3} или {"task_ids": [1, 2, 3]}',
           response: '{"success": true, "message": "Назначено задач: 3", "assigned_count": 3}' },
-        { method: 'POST', path: '/admin/users/{id}/clear', desc: 'Снять назначение', auth: true, admin: true,
+        { method: 'POST', path: '/api/admin/users/{id}/clear', desc: 'Снять назначение', auth: true, admin: true,
           body: '{} (все) или {"taskId": 3} (конкретная)',
           response: '{"success": true, "message": "Все назначения сняты"}' },
       ]
@@ -844,22 +844,22 @@ function EndpointsTab({ copyCode, copiedCode }: { copyCode: (code: string, id: s
     {
       section: '👥 Админка — Группы',
       items: [
-        { method: 'GET', path: '/admin/groups', desc: 'Список групп', auth: true, admin: true,
+        { method: 'GET', path: '/api/admin/groups', desc: 'Список групп', auth: true, admin: true,
           response: '[{"id": 1, "name": "Команда А", "user_count": 5, "users": [...]}]' },
-        { method: 'POST', path: '/admin/groups/create', desc: 'Создать группу', auth: true, admin: true,
+        { method: 'POST', path: '/api/admin/groups/create', desc: 'Создать группу', auth: true, admin: true,
           body: '{"name": "Команда А", "description": "...", "user_ids": [1, 2, 3]}',
           response: '{"id": 1, "name": "Команда А", "success": true}' },
-        { method: 'GET', path: '/admin/groups/{id}', desc: 'Детали группы', auth: true, admin: true,
+        { method: 'GET', path: '/api/admin/groups/{id}', desc: 'Детали группы', auth: true, admin: true,
           response: '{"id": 1, "name": "Команда А", "user_count": 5, "users": [...]}' },
-        { method: 'PUT', path: '/admin/groups/{id}', desc: 'Обновить группу', auth: true, admin: true,
+        { method: 'PUT', path: '/api/admin/groups/{id}', desc: 'Обновить группу', auth: true, admin: true,
           body: '{"name": "Новое имя", "user_ids": [1, 2, 3, 4]}',
           response: '{"id": 1, "name": "Новое имя", "success": true}' },
-        { method: 'DELETE', path: '/admin/groups/{id}', desc: 'Удалить группу', auth: true, admin: true,
+        { method: 'DELETE', path: '/api/admin/groups/{id}', desc: 'Удалить группу', auth: true, admin: true,
           response: '{"success": true, "message": "Группа удалена"}' },
-        { method: 'POST', path: '/admin/groups/{id}/assign', desc: 'Назначить задачи группе', auth: true, admin: true,
+        { method: 'POST', path: '/api/admin/groups/{id}/assign', desc: 'Назначить задачи группе', auth: true, admin: true,
           body: '{"task_ids": [1, 2, 3]}',
           response: '{"success": true, "assigned_count": 15, "users_count": 5, "tasks_count": 3}' },
-        { method: 'POST', path: '/admin/groups/{id}/clear', desc: 'Снять назначения группы', auth: true, admin: true,
+        { method: 'POST', path: '/api/admin/groups/{id}/clear', desc: 'Снять назначения группы', auth: true, admin: true,
           body: '{} (все) или {"task_ids": [1, 2]}',
           response: '{"success": true, "deleted_count": 10}' },
       ]
@@ -867,14 +867,14 @@ function EndpointsTab({ copyCode, copiedCode }: { copyCode: (code: string, id: s
     {
       section: '🎮 Админка — Задачи и настройки',
       items: [
-        { method: 'GET', path: '/admin/tasks', desc: 'Все задачи (админ)', auth: true, admin: true,
+        { method: 'GET', path: '/api/admin/tasks', desc: 'Все задачи (админ)', auth: true, admin: true,
           response: '[{"id": 1, "title": "...", "expectedResult": [...]}]' },
-        { method: 'POST', path: '/admin/tasks', desc: 'Создать задачу', auth: true, admin: true,
+        { method: 'POST', path: '/api/admin/tasks', desc: 'Создать задачу', auth: true, admin: true,
           body: '{"title": "...", "description": "...", "difficulty": "medium", "points": 250, "schema": "...", "tables": [...], "expectedResult": [...]}',
           response: '{"id": 10, "title": "Новая задача", "success": true}' },
-        { method: 'GET', path: '/admin/settings', desc: 'Настройки', auth: true, admin: true,
+        { method: 'GET', path: '/api/admin/settings', desc: 'Настройки', auth: true, admin: true,
           response: '{"battle_start": "2026-09-15T10:00:00Z", "round_duration_minutes": 120}' },
-        { method: 'PUT', path: '/admin/settings', desc: 'Обновить настройки', auth: true, admin: true,
+        { method: 'PUT', path: '/api/admin/settings', desc: 'Обновить настройки', auth: true, admin: true,
           body: '{"battle_start": "2026-09-15T10:00:00Z", "round_duration_minutes": 90}' },
       ]
     },

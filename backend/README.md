@@ -155,60 +155,60 @@ backend/
 ### Аутентификация
 | Метод | URL | Описание |
 |-------|-----|----------|
-| POST | `/auth/register` | Регистрация → `{ token, user }` |
-| POST | `/auth/login` | Вход → `{ token, user }` |
+| POST | `/api/auth/register` | Регистрация → `{ token, user }` |
+| POST | `/api/auth/login` | Вход → `{ token, user }` |
 
 ### Профиль
 | Метод | URL | Описание |
 |-------|-----|----------|
-| GET | `/profile` | `{ totalPoints, total_points, solvedTasks, solved_tasks, rank }` |
-| GET | `/profile/history` | История решений |
+| GET | `/api/profile` | `{ totalPoints, total_points, solvedTasks, solved_tasks, rank }` |
+| GET | `/api/profile/history` | История решений |
 
 ### Задачи
 | Метод | URL | Описание |
 |-------|-----|----------|
-| GET | `/tasks` | Список (без авторизации) |
-| GET | `/tasks/{id}` | Детали (с авторизацией) |
-| POST | `/tasks/{id}/execute` | Выполнить SQL |
-| POST | `/tasks/{id}/submit` | Проверка (принимает `time_spent`) |
+| GET | `/api/tasks` | Список (без авторизации) |
+| GET | `/api/tasks/{id}` | Детали (с авторизацией) |
+| POST | `/api/tasks/{id}/execute` | Выполнить SQL |
+| POST | `/api/tasks/{id}/submit` | Проверка (принимает `time_spent`) |
 
 ### Лидерборд
 | Метод | URL | Описание |
 |-------|-----|----------|
-| GET | `/leaderboard` | `{ total_time_spent, totalTimeSpent, avgTime }` |
-| WS | `/ws/leaderboard/?token=...` | Реалтайм обновления |
+| GET | `/api/leaderboard` | `{ total_time_spent, totalTimeSpent, avgTime }` |
+| WS | `ws://...:8000/ws/leaderboard/?token=...` | Реалтайм обновления |
 
 ### Пользователь
 | Метод | URL | Описание |
 |-------|-----|----------|
-| GET | `/user/assigned-tasks` | Все назначенные задачи (массив) |
-| GET | `/user/assigned-task` | Первая назначенная задача (совместимость) |
+| GET | `/api/user/assigned-tasks` | Все назначенные задачи (массив) |
+| GET | `/api/user/assigned-task` | Первая назначенная задача (совместимость) |
 
 ### Админка — Пользователи
 | Метод | URL | Описание |
 |-------|-----|----------|
-| GET | `/admin/users` | `{ assignedTaskId, assignedTaskIds }` |
-| POST | `/admin/users/{id}/assign` | Назначить задачу(и): `{taskId}` или `{task_ids: [1,2,3]}` |
-| POST | `/admin/users/{id}/clear` | Снять: `{taskId}` или все |
+| GET | `/api/admin/users` | `{ assignedTaskId, assignedTaskIds }` |
+| POST | `/api/admin/users/{id}/assign` | Назначить задачу(и): `{taskId}` или `{task_ids: [1,2,3]}` |
+| POST | `/api/admin/users/{id}/clear` | Снять: `{taskId}` или все |
 
 ### Админка — Группы
 | Метод | URL | Описание |
 |-------|-----|----------|
-| GET | `/admin/groups` | Список всех групп |
-| POST | `/admin/groups/create` | Создать группу: `{name, description, user_ids}` |
-| GET | `/admin/groups/{id}` | Детали группы |
-| PUT | `/admin/groups/{id}` | Обновить группу |
-| DELETE | `/admin/groups/{id}` | Удалить группу |
-| POST | `/admin/groups/{id}/assign` | Назначить задачи группе: `{task_ids: [1,2,3]}` |
-| POST | `/admin/groups/{id}/clear` | Снять назначения группы |
+| GET | `/api/admin/groups` | Список всех групп |
+| POST | `/api/admin/groups/create` | Создать группу: `{name, description, user_ids}` |
+| GET | `/api/admin/groups/{id}` | Детали группы |
+| PUT | `/api/admin/groups/{id}` | Обновить группу |
+| DELETE | `/api/admin/groups/{id}` | Удалить группу |
+| POST | `/api/admin/groups/{id}/assign` | Назначить задачи группе: `{task_ids: [1,2,3]}` |
+| POST | `/api/admin/groups/{id}/clear` | Снять назначения группы |
 
 ### Админка — Задачи и настройки
 | Метод | URL | Описание |
 |-------|-----|----------|
-| GET | `/admin/tasks` | Все задачи |
-| POST | `/admin/tasks` | Создать задачу |
-| GET | `/admin/settings` | Настройки баттла |
-| PUT | `/admin/settings` | Обновить настройки |
+| GET | `/api/admin/tasks` | Все задачи |
+| POST | `/api/admin/tasks` | Создать задачу |
+| GET | `/api/admin/settings` | Настройки баттла |
+| PUT | `/api/admin/settings` | Обновить настройки |
 
 ## 🔐 Аутентификация
 
@@ -228,11 +228,11 @@ ws://localhost:8000/ws/leaderboard?token=<jwt_token>
 
 ```bash
 # Назначить одну задачу
-POST /admin/users/1/assign
+POST /api/admin/users/1/assign
 {"taskId": 3}
 
 # Назначить несколько задач сразу
-POST /admin/users/1/assign
+POST /api/admin/users/1/assign
 {"task_ids": [1, 2, 3, 5]}
 ```
 
@@ -244,7 +244,7 @@ POST /admin/users/1/assign
 
 ```bash
 # Создать группу
-POST /admin/groups/create
+POST /api/admin/groups/create
 {
   "name": "Команда А",
   "description": "Первая команда участников",
@@ -252,15 +252,15 @@ POST /admin/groups/create
 }
 
 # Назначить задачи всей группе
-POST /admin/groups/1/assign
+POST /api/admin/groups/1/assign
 {"task_ids": [1, 2, 3]}
 
 # Снять все назначения у группы
-POST /admin/groups/1/clear
+POST /api/admin/groups/1/clear
 {}
 
 # Снять конкретные задачи у группы
-POST /admin/groups/1/clear
+POST /api/admin/groups/1/clear
 {"task_ids": [1, 2]}
 ```
 
@@ -268,7 +268,7 @@ POST /admin/groups/1/clear
 
 ```bash
 # Получить все назначенные задачи (массив)
-GET /user/assigned-tasks
+GET /api/user/assigned-tasks
 Response: [
   {
     "id": 1,
@@ -282,7 +282,7 @@ Response: [
 ]
 
 # Получить первую задачу (для совместимости)
-GET /user/assigned-task
+GET /api/user/assigned-task
 Response: {
   "id": 1,
   "title": "Задача 1",
