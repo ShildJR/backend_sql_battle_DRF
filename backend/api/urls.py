@@ -28,9 +28,8 @@ urlpatterns = [
     path('admin/users/<int:user_id>/assign', views.admin_assign_task_view, name='admin-assign'),
     path('admin/users/<int:user_id>/clear', views.admin_clear_assignment_view, name='admin-clear'),
 
-    # Админка — задачи
+    # Админка — задачи (GET и POST на одном URL)
     path('admin/tasks', views.admin_tasks_view, name='admin-tasks'),
-    path('admin/tasks/create', views.admin_create_task_view, name='admin-create-task'),
 
     # Админка — группы пользователей
     path('admin/groups', views.admin_groups_view, name='admin-groups'),
@@ -39,6 +38,8 @@ urlpatterns = [
     path('admin/groups/<int:group_id>/assign', views.admin_assign_tasks_to_group_view, name='admin-assign-group'),
     path('admin/groups/<int:group_id>/clear', views.admin_clear_group_assignments_view, name='admin-clear-group'),
 
+    # Админка — настройки (GET и PUT на одном URL)
+    path('admin/settings', views.admin_settings_view, name='admin-settings'),
     # Публичные настройки — доступны всем (для лобби/таймера)
     path('settings', views.public_settings_view, name='public-settings'),
 

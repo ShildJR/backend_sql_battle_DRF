@@ -492,9 +492,40 @@ def admin_clear_assignment_view(request, user_id):
 # 8. АДМИНКА — задачи
 # ==========================================
 
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
 @permission_classes([IsAdmin])
 def admin_tasks_view(request):
+    """
+    GET /admin/tasks — Все задачи для админки
+    POST /admin/tasks — Создать задачу (принимает camelCase expectedResult)
+    """
+    if request.method == 'GET':
+        tasks = Task.objects.all()
+        serializer = AdminTaskSerializer(tasks, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    elif request.method == 'POST':
+        serializer = CreateTaskSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        data = serializer.validated_data
+        task = Task.objects.create(
+            title=data['title'],
+            description=data['description'],
+            difficulty=data['difficulty'],
+            points=data['points'],
+            schema=data['schema'],
+            tables=data['tables'],
+            expected_result=data.get('expectedResult', [])
+        )
+
+        return Response({
+            'id': task.id,
+            'title': task.title,
+            'success': True
+        }, status=status.HTTP_201_CREATED)
+
     return Response(AdminTaskSerializer(Task.objects.all(), many=True).data, status=status.HTTP_200_OK)
 
 
@@ -687,6 +718,7 @@ def _parse_dt(value):
     return dt
 
 
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def public_settings_view(request):
@@ -704,39 +736,17 @@ def public_settings_view(request):
 @permission_classes([IsAdmin])
 def admin_settings_view(request):
     """
-    GET  /api/admin/settings — прочитать настройки (админ)
-    PUT  /api/admin/settings — обновить настройки (админ)
-
-    Body для PUT (все поля опциональны):
-    {
-      "battle_start": "2026-09-15T10:00:00Z",
-      "battle_end":   "2026-09-15T12:00:00Z",
-      "round_duration_minutes": 120,
-      "is_active": true
-    }
+    GET /admin/settings — Получить настройки
+    PUT /admin/settings — Обновить настройки
     """
-    s = BattleSettings.get_solo()
+    global _battle_settings
 
     if request.method == 'GET':
-        return Response(_serialize_settings(s), status=status.HTTP_200_OK)
+        return Response(_battle_settings, status=status.HTTP_200_OK)
 
-    # PUT
-    data = request.data
-
-    if 'battle_start' in data:
-        s.battle_start = _parse_dt(data['battle_start'])
-    if 'battle_end' in data:
-        s.battle_end = _parse_dt(data['battle_end'])
-    if 'round_duration_minutes' in data:
-        try:
-            s.round_duration_minutes = int(data['round_duration_minutes'])
-        except (TypeError, ValueError):
-            return Response(
-                {'detail': 'round_duration_minutes должен быть числом'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-    if 'is_active' in data:
-        s.is_active = bool(data['is_active'])
-
-    s.save()
-    return Response(_serialize_settings(s), status=status.HTTP_200_OK)
+    elif request.method == 'PUT':
+        if 'battle_start' in request.data:
+            _battle_settings['battle_start'] = request.data['battle_start']
+        if 'round_duration_minutes' in request.data:
+            _battle_settings['round_duration_minutes'] = request.data['round_duration_minutes']
+        return Response(_battle_settings, status=status.HTTP_200_OK)

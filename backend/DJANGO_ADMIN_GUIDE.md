@@ -111,7 +111,7 @@ daphne -b 0.0.0.0 -p 8000 sql_battle.asgi:application
 ### Назначение задач пользователю
 
 ```bash
-POST /admin/users/{user_id}/assign
+POST /api/admin/users/{user_id}/assign
 {
   "task_ids": [1, 2, 3]
 }
@@ -120,7 +120,7 @@ POST /admin/users/{user_id}/assign
 ### Назначение задач группе
 
 ```bash
-POST /admin/groups/{group_id}/assign
+POST /api/admin/groups/{group_id}/assign
 {
   "task_ids": [1, 2, 3]
 }
@@ -129,7 +129,7 @@ POST /admin/groups/{group_id}/assign
 ### Создание группы
 
 ```bash
-POST /admin/groups/create
+POST /api/admin/groups/create
 {
   "name": "Команда А",
   "description": "Первая команда",
