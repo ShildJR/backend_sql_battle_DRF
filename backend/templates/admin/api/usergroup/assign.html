@@ -1,0 +1,86 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+
+{% block content %}
+<div id="content-main">
+    <h2>Назначить задачи группе: {{ group.name }}</h2>
+    <p>В группе {{ group.users.count }} пользователей</p>
+    
+    <form method="post" id="assign-tasks-form">
+        {% csrf_token %}
+        
+        <fieldset class="module aligned">
+            <h2>Выберите задачи для назначения</h2>
+            <div class="form-row">
+                <ul>
+                {% for task in tasks %}
+                    <li>
+                        <label>
+                            <input type="checkbox" name="tasks" value="{{ task.id }}" />
+                            {{ task.title }} 
+                            <span style="color: #666;">
+                                ({{ task.get_difficulty_display }}, {{ task.points }} баллов)
+                            </span>
+                        </label>
+                    </li>
+                {% endfor %}
+                </ul>
+            </div>
+        </fieldset>
+        
+        <div class="submit-row">
+            <input type="submit" value="Назначить задачи" class="default" />
+            <a href="../../" class="button cancel-link">Отмена</a>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const checkboxes = document.querySelectorAll('input[name="tasks"]');
+    const submitButton = document.querySelector('input[type="submit"]');
+    
+    function updateButtonState() {
+        const checked = document.querySelectorAll('input[name="tasks"]:checked').length;
+        submitButton.disabled = checked === 0;
+        submitButton.value = checked > 0 
+            ? `Назначить ${checked} задач` 
+            : 'Назначить задачи';
+    }
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateButtonState);
+    });
+    
+    updateButtonState();
+});
+</script>
+
+<style>
+#assign-tasks-form fieldset {
+    margin-bottom: 20px;
+}
+#assign-tasks-form .form-row {
+    padding: 10px;
+}
+#assign-tasks-form ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    padding: 10px;
+}
+#assign-tasks-form li {
+    padding: 5px 0;
+}
+#assign-tasks-form label {
+    display: block;
+    cursor: pointer;
+}
+#assign-tasks-form label:hover {
+    background-color: #f0f0f0;
+}
+</style>
+{% endblock %}

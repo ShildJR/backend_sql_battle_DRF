@@ -215,7 +215,40 @@ path('profile/history', views.profile_history_view, name='profile-history'),`
           <li>✅ Лидерборд возвращает <code className="text-green-400">total_time_spent</code></li>
           <li>✅ Профиль возвращает оба формата: <code className="text-green-400">totalPoints</code> и <code className="text-green-400">total_points</code></li>
           <li>✅ <code className="text-green-400">/tasks</code> доступен без авторизации</li>
+          <li>✅ <strong className="text-green-400">Django Admin</strong> — массовое назначение задач пользователям и группам</li>
         </ul>
+      </div>
+
+      {/* Django Admin */}
+      <div className="bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border border-blue-500/20 rounded-xl p-6">
+        <h2 className="text-2xl font-bold mb-2">🎛️ Django Admin — Массовое назначение задач</h2>
+        <p className="text-gray-300 mb-4">
+          Реализован полный функционал массового назначения задач через Django Admin интерфейс:
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-gray-800/50 rounded-lg p-4">
+            <h3 className="font-semibold text-blue-400 mb-2">📋 Массовое назначение</h3>
+            <ul className="text-sm text-gray-400 space-y-1">
+              <li>• Выбор типа: пользователь или группа</li>
+              <li>• Выбор нескольких пользователей</li>
+              <li>• Выбор нескольких задач</li>
+              <li>• Автоматическое создание назначений</li>
+            </ul>
+          </div>
+          <div className="bg-gray-800/50 rounded-lg p-4">
+            <h3 className="font-semibold text-blue-400 mb-2">👥 Управление группами</h3>
+            <ul className="text-sm text-gray-400 space-y-1">
+              <li>• Создание групп пользователей</li>
+              <li>• Редактирование групп</li>
+              <li>• Назначение задач всей группе</li>
+              <li>• Просмотр участников группы</li>
+            </ul>
+          </div>
+        </div>
+        <div className="mt-4 bg-gray-800 rounded-lg p-4">
+          <p className="text-sm text-gray-400 mb-2">Доступ к Django Admin:</p>
+          <code className="text-green-400">http://localhost:8000/admin/</code>
+        </div>
       </div>
 
       {/* Изменения */}

@@ -1,0 +1,99 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+
+{% block content %}
+<div id="content-main">
+    <h2>Массовое назначение задач</h2>
+    
+    <form method="post" id="bulk-assign-form">
+        {% csrf_token %}
+        
+        <fieldset class="module aligned">
+            <h2>1. Выберите тип назначения</h2>
+            <div class="form-row">
+                {{ form.assign_type.errors }}
+                {{ form.assign_type }}
+            </div>
+        </fieldset>
+        
+        <fieldset class="module aligned" id="users-fieldset">
+            <h2>2а. Выберите пользователей</h2>
+            <div class="form-row">
+                {{ form.users.errors }}
+                {{ form.users }}
+            </div>
+        </fieldset>
+        
+        <fieldset class="module aligned" id="group-fieldset" style="display: none;">
+            <h2>2б. Выберите группу</h2>
+            <div class="form-row">
+                {{ form.group.errors }}
+                {{ form.group }}
+            </div>
+        </fieldset>
+        
+        <fieldset class="module aligned">
+            <h2>3. Выберите задачи</h2>
+            <div class="form-row">
+                {{ form.tasks.errors }}
+                {{ form.tasks }}
+            </div>
+        </fieldset>
+        
+        <div class="submit-row">
+            <input type="submit" value="Назначить задачи" class="default" />
+            <a href="../" class="button cancel-link">Отмена</a>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const assignTypeRadios = document.querySelectorAll('input[name="assign_type"]');
+    const usersFieldset = document.getElementById('users-fieldset');
+    const groupFieldset = document.getElementById('group-fieldset');
+    
+    function updateVisibility() {
+        const selectedType = document.querySelector('input[name="assign_type"]:checked').value;
+        if (selectedType === 'user') {
+            usersFieldset.style.display = 'block';
+            groupFieldset.style.display = 'none';
+        } else {
+            usersFieldset.style.display = 'none';
+            groupFieldset.style.display = 'block';
+        }
+    }
+    
+    assignTypeRadios.forEach(radio => {
+        radio.addEventListener('change', updateVisibility);
+    });
+    
+    updateVisibility();
+});
+</script>
+
+<style>
+#bulk-assign-form fieldset {
+    margin-bottom: 20px;
+}
+#bulk-assign-form .form-row {
+    padding: 10px;
+}
+#bulk-assign-form ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    padding: 10px;
+}
+#bulk-assign-form li {
+    padding: 5px 0;
+}
+#bulk-assign-form label {
+    display: block;
+    margin-bottom: 5px;
+}
+</style>
+{% endblock %}
