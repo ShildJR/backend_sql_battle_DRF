@@ -49,6 +49,7 @@ class LeaderboardConsumer(AsyncWebSocketConsumer):
     def get_leaderboard(self):
         """Получает данные лидерборда из БД — camelCase для совместимости с фронтендом"""
         from .models import User, Submission
+        from django.db.models import Sum
 
         users = User.objects.filter(
             Q(total_points__gt=0) | Q(role='participant')
@@ -60,11 +61,12 @@ class LeaderboardConsumer(AsyncWebSocketConsumer):
                 user=user, is_correct=True
             ).values('task_id').distinct().count()
 
-            avg_time = Submission.objects.filter(
+            # Считаем общее время, потраченное на все правильные решения
+            total_time_ms = Submission.objects.filter(
                 user=user, is_correct=True, execution_time_ms__isnull=False
-            ).aggregate(avg=Avg('execution_time_ms'))['avg']
+            ).aggregate(total=Sum('execution_time_ms'))['total']
 
-            avg_time_seconds = round((avg_time or 0) / 1000, 2)
+            total_time_seconds = round((total_time_ms or 0) / 1000, 2)
             avatar = user.username[:2].upper() if user.username else '??'
 
             # camelCase для совместимости с фронтендом
@@ -73,7 +75,9 @@ class LeaderboardConsumer(AsyncWebSocketConsumer):
                 'username': user.username,
                 'totalPoints': user.total_points,
                 'solvedTasks': solved_count,
-                'avgTime': avg_time_seconds,
+                'total_time_spent': total_time_seconds,  # Новое поле
+                'totalTimeSpent': total_time_seconds,    # Для обратной совместимости
+                'avgTime': round(total_time_seconds / max(solved_count, 1), 2),  # Старое поле
                 'avatar': avatar
             })
 
