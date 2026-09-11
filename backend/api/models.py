@@ -80,10 +80,18 @@ class Submission(models.Model):
 
 
 class TaskAssignment(models.Model):
-    """Назначение задачи участнику (теперь поддерживает несколько задач на пользователя)"""
+    """
+    Назначение задачи участнику.
+
+    Поля:
+    - assigned_at  — когда назначили (auto)
+    - started_at   — с какого момента задача доступна пользователю
+    - deadline     — до какого момента задача должна быть решена (дедлайн)
+    - completed_at — когда пользователь реально решил задачу (NULL = не решена)
+    """
     user = models.ForeignKey(
         User, on_delete=models.CASCADE,
-        related_name='assignments',  # Изменено с 'assignment' на 'assignments'
+        related_name='assignments',
         verbose_name='Пользователь'
     )
     task = models.ForeignKey(
@@ -92,13 +100,14 @@ class TaskAssignment(models.Model):
         verbose_name='Задача'
     )
     assigned_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата назначения')
-    started_at = models.DateTimeField(null=True, blank=True, verbose_name='Дата начала')
+    started_at = models.DateTimeField(null=True, blank=True, verbose_name='Доступна с')
+    deadline = models.DateTimeField(null=True, blank=True, verbose_name='Дедлайн')
     completed_at = models.DateTimeField(null=True, blank=True, verbose_name='Дата завершения')
 
     class Meta:
         verbose_name = 'Назначение задачи'
         verbose_name_plural = 'Назначения задач'
-        unique_together = ['user', 'task']  # Один пользователь не может иметь одну задачу дважды
+        unique_together = ['user', 'task']
 
     def __str__(self):
         return f"{self.user.username} → {self.task.title}"
@@ -118,3 +127,56 @@ class UserGroup(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.users.count()} пользователей)"
+
+
+class BattleSettings(models.Model):
+    """
+    Настройки турнира. Singleton — в БД всегда ровно одна запись (pk=1).
+    """
+    battle_start = models.DateTimeField(
+        null=True, blank=True,
+        verbose_name='Время начала турнира'
+    )
+    battle_end = models.DateTimeField(
+        null=True, blank=True,
+        verbose_name='Время окончания турнира'
+    )
+    round_duration_minutes = models.PositiveIntegerField(
+        default=120,
+        verbose_name='Длительность раунда (мин)'
+    )
+    is_active = models.BooleanField(
+        default=False,
+        verbose_name='Турнир активен'
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='Обновлено'
+    )
+
+    class Meta:
+        verbose_name = 'Настройки турнира'
+        verbose_name_plural = 'Настройки турнира'
+
+    def __str__(self):
+        return 'Настройки турнира'
+
+    def save(self, *args, **kwargs):
+        # Singleton: всегда pk=1
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_solo(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+    @property
+    def effective_battle_end(self):
+        """Если battle_end не задан, считаем его как battle_start + round_duration."""
+        if self.battle_end:
+            return self.battle_end
+        if self.battle_start:
+            from datetime import timedelta
+            return self.battle_start + timedelta(minutes=self.round_duration_minutes)
+        return None

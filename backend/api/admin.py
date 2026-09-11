@@ -8,6 +8,8 @@ from django.utils import timezone
 from datetime import timedelta
 from .models import User, Task, TaskAssignment, UserGroup, Submission
 from .forms import BulkAssignForm, CreateGroupForm, EditGroupForm
+from django.contrib import admin
+from .models import BattleSettings
 
 
 @admin.register(User)
@@ -267,3 +269,14 @@ class UserGroupAdmin(admin.ModelAdmin):
         extra_context = extra_context or {}
         extra_context['show_create_button'] = True
         return super().changelist_view(request, extra_context=extra_context)
+
+@admin.register(BattleSettings)
+class BattleSettingsAdmin(admin.ModelAdmin):
+    list_display = ('battle_start', 'battle_end', 'round_duration_minutes', 'is_active', 'updated_at')
+
+    def has_add_permission(self, request):
+        # Singleton — не даём создавать вторую запись через админку
+        return not BattleSettings.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False

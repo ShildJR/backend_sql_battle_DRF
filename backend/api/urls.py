@@ -39,7 +39,11 @@ urlpatterns = [
     path('admin/groups/<int:group_id>/assign', views.admin_assign_tasks_to_group_view, name='admin-assign-group'),
     path('admin/groups/<int:group_id>/clear', views.admin_clear_group_assignments_view, name='admin-clear-group'),
 
-    # Админка — настройки
+    # Публичные настройки — доступны всем (для лобби/таймера)
+    path('settings', views.public_settings_view, name='public-settings'),
+
+    # Админские настройки — GET читает, PUT пишет
     path('admin/settings', views.admin_settings_view, name='admin-settings'),
-    path('admin/settings/update', views.admin_settings_update_view, name='admin-settings-update'),
+
+    path('settings', views.public_settings_view, name='public-settings'),
 ]
