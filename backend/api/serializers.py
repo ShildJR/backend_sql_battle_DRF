@@ -37,7 +37,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'rating', 'totalPoints', 'role']
+        fields = ['id', 'username', 'email', 'rating', 'totalPoints', 'role', 'solvedTasks', 'rank']
 
     def get_solvedTasks(self, obj):
         return list(

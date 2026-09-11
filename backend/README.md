@@ -72,6 +72,9 @@ POST /tasks/{id}/submit
 ### 1. Установка зависимостей
 
 ```bash
+
+git clone https://github.com/ShildJR/backend_sql_battle_DRF
+
 cd backend
 python -m venv venv
 source venv/bin/activate  # Linux/Mac
