@@ -4,6 +4,8 @@ from django.shortcuts import render, redirect
 from django.urls import path
 from django.contrib import messages
 from django.http import HttpResponseRedirect
+from django.utils import timezone
+from datetime import timedelta
 from .models import User, Task, TaskAssignment, UserGroup, Submission
 from .forms import BulkAssignForm, CreateGroupForm, EditGroupForm
 
@@ -59,6 +61,11 @@ class TaskAssignmentAdmin(admin.ModelAdmin):
                 assign_type = form.cleaned_data['assign_type']
                 tasks = form.cleaned_data['tasks']
                 
+                # Устанавливаем даты: начало через 1 минуту, завершение через 24 часа
+                now = timezone.now()
+                started_at = now + timedelta(minutes=1)
+                completed_at = now + timedelta(hours=24)
+                
                 if assign_type == 'user':
                     users = form.cleaned_data['users']
                     count = 0
@@ -67,7 +74,10 @@ class TaskAssignmentAdmin(admin.ModelAdmin):
                             _, created = TaskAssignment.objects.get_or_create(
                                 user=user,
                                 task=task,
-                                defaults={'completed_at': None}
+                                defaults={
+                                    'started_at': started_at,
+                                    'completed_at': completed_at
+                                }
                             )
                             if created:
                                 count += 1
@@ -82,7 +92,10 @@ class TaskAssignmentAdmin(admin.ModelAdmin):
                             _, created = TaskAssignment.objects.get_or_create(
                                 user=user,
                                 task=task,
-                                defaults={'completed_at': None}
+                                defaults={
+                                    'started_at': started_at,
+                                    'completed_at': completed_at
+                                }
                             )
                             if created:
                                 count += 1
@@ -212,6 +225,11 @@ class UserGroupAdmin(admin.ModelAdmin):
             if not task_ids:
                 messages.error(request, 'Выберите хотя бы одну задачу')
             else:
+                # Устанавливаем даты: начало через 1 минуту, завершение через 24 часа
+                now = timezone.now()
+                started_at = now + timedelta(minutes=1)
+                completed_at = now + timedelta(hours=24)
+                
                 tasks = Task.objects.filter(id__in=task_ids)
                 users = group.users.all()
                 count = 0
@@ -220,7 +238,10 @@ class UserGroupAdmin(admin.ModelAdmin):
                         _, created = TaskAssignment.objects.get_or_create(
                             user=user,
                             task=task,
-                            defaults={'completed_at': None}
+                            defaults={
+                                'started_at': started_at,
+                                'completed_at': completed_at
+                            }
                         )
                         if created:
                             count += 1
