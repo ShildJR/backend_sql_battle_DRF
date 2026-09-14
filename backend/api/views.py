@@ -692,7 +692,7 @@ def admin_clear_group_assignments_view(request, group_id):
 
 
 @api_view(['GET', 'PUT'])
-@permission_classes([IsAdmin])
+
 def admin_settings_view(request):
     """
     GET /admin/settings — Получить настройки
