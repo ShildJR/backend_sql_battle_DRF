@@ -1,22 +1,25 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.utils import timezone  # Добавили этот импорт
+from datetime import datetime  # Добавили этот импорт
 
 
 class User(AbstractUser):
     """Пользователь платформы SQL Battle"""
-    rating = models.IntegerField(default=0, verbose_name='Рейтинг')
-    total_points = models.IntegerField(default=0, verbose_name='Всего баллов')
+
+    rating = models.IntegerField(default=0, verbose_name="Рейтинг")
+    total_points = models.IntegerField(default=0, verbose_name="Всего баллов")
     role = models.CharField(
         max_length=20,
-        default='participant',
-        choices=[('participant', 'Участник'), ('admin', 'Администратор')],
-        verbose_name='Роль'
+        default="participant",
+        choices=[("participant", "Участник"), ("admin", "Администратор")],
+        verbose_name="Роль",
     )
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
 
     class Meta:
-        verbose_name = 'Пользователь'
-        verbose_name_plural = 'Пользователи'
+        verbose_name = "Пользователь"
+        verbose_name_plural = "Пользователи"
 
     def __str__(self):
         return self.username
@@ -24,29 +27,28 @@ class User(AbstractUser):
 
 class Task(models.Model):
     """Задача для SQL-баттла"""
+
     DIFFICULTY_CHOICES = [
-        ('easy', 'Лёгкая'),
-        ('medium', 'Средняя'),
-        ('hard', 'Сложная'),
+        ("easy", "Лёгкая"),
+        ("medium", "Средняя"),
+        ("hard", "Сложная"),
     ]
 
-    title = models.CharField(max_length=200, verbose_name='Название')
-    description = models.TextField(verbose_name='Описание')
+    title = models.CharField(max_length=200, verbose_name="Название")
+    description = models.TextField(verbose_name="Описание")
     difficulty = models.CharField(
-        max_length=20,
-        choices=DIFFICULTY_CHOICES,
-        verbose_name='Сложность'
+        max_length=20, choices=DIFFICULTY_CHOICES, verbose_name="Сложность"
     )
-    points = models.IntegerField(verbose_name='Баллы')
-    schema = models.TextField(verbose_name='DDL схема')
-    tables = models.JSONField(verbose_name='Структура таблиц с примерами')
-    expected_result = models.JSONField(verbose_name='Эталонный результат')
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
+    points = models.IntegerField(verbose_name="Баллы")
+    schema = models.TextField(verbose_name="DDL схема")
+    tables = models.JSONField(verbose_name="Структура таблиц с примерами")
+    expected_result = models.JSONField(verbose_name="Эталонный результат")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
 
     class Meta:
-        verbose_name = 'Задача'
-        verbose_name_plural = 'Задачи'
-        ordering = ['id']
+        verbose_name = "Задача"
+        verbose_name_plural = "Задачи"
+        ordering = ["id"]
 
     def __str__(self):
         return f"[{self.difficulty}] {self.title}"
@@ -54,60 +56,70 @@ class Task(models.Model):
 
 class Submission(models.Model):
     """Попытка решения задачи"""
+
     user = models.ForeignKey(
-        User, on_delete=models.CASCADE,
-        related_name='submissions',
-        verbose_name='Пользователь'
+        User,
+        on_delete=models.CASCADE,
+        related_name="submissions",
+        verbose_name="Пользователь",
     )
     task = models.ForeignKey(
-        Task, on_delete=models.CASCADE,
-        related_name='submissions',
-        verbose_name='Задача'
+        Task,
+        on_delete=models.CASCADE,
+        related_name="submissions",
+        verbose_name="Задача",
     )
-    query = models.TextField(verbose_name='SQL-запрос')
-    is_correct = models.BooleanField(default=False, verbose_name='Правильно')
-    points_earned = models.IntegerField(default=0, verbose_name='Заработанные баллы')
-    execution_time_ms = models.IntegerField(null=True, blank=True, verbose_name='Время выполнения (мс)')
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
+    query = models.TextField(verbose_name="SQL-запрос")
+    is_correct = models.BooleanField(default=False, verbose_name="Правильно")
+    points_earned = models.IntegerField(default=0, verbose_name="Заработанные баллы")
+    execution_time_ms = models.IntegerField(
+        null=True, blank=True, verbose_name="Время выполнения БД (мс)"
+    )
+
+    # 🔥 ДОБАВЛЕНО: Время, затраченное пользователем на размышления (в секундах)
+    time_spent = models.IntegerField(
+        null=True, blank=True, verbose_name="Затраченное время (сек)"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
 
     class Meta:
-        verbose_name = 'Попытка решения'
-        verbose_name_plural = 'Попытки решений'
-        ordering = ['-created_at']
+        verbose_name = "Попытка решения"
+        verbose_name_plural = "Попытки решений"
+        ordering = ["-created_at"]
 
     def __str__(self):
         return f"{self.user.username} - {self.task.title} ({'✓' if self.is_correct else '✗'})"
 
 
 class TaskAssignment(models.Model):
-    """
-    Назначение задачи участнику.
+    """Назначение задачи участнику."""
 
-    Поля:
-    - assigned_at  — когда назначили (auto)
-    - started_at   — с какого момента задача доступна пользователю
-    - deadline     — до какого момента задача должна быть решена (дедлайн)
-    - completed_at — когда пользователь реально решил задачу (NULL = не решена)
-    """
     user = models.ForeignKey(
-        User, on_delete=models.CASCADE,
-        related_name='assignments',
-        verbose_name='Пользователь'
+        User,
+        on_delete=models.CASCADE,
+        related_name="assignments",
+        verbose_name="Пользователь",
     )
     task = models.ForeignKey(
-        Task, on_delete=models.CASCADE,
-        related_name='assignments',
-        verbose_name='Задача'
+        Task,
+        on_delete=models.CASCADE,
+        related_name="assignments",
+        verbose_name="Задача",
     )
-    assigned_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата назначения')
-    started_at = models.DateTimeField(null=True, blank=True, verbose_name='Доступна с')
-    deadline = models.DateTimeField(null=True, blank=True, verbose_name='Дедлайн')
-    completed_at = models.DateTimeField(null=True, blank=True, verbose_name='Дата завершения')
+    assigned_at = models.DateTimeField(
+        auto_now_add=True, verbose_name="Дата назначения"
+    )
+    started_at = models.DateTimeField(null=True, blank=True, verbose_name="Доступна с")
+    deadline = models.DateTimeField(null=True, blank=True, verbose_name="Дедлайн")
+    completed_at = models.DateTimeField(
+        null=True, blank=True, verbose_name="Дата завершения"
+    )
 
     class Meta:
-        verbose_name = 'Назначение задачи'
-        verbose_name_plural = 'Назначения задач'
-        unique_together = ['user', 'task']
+        verbose_name = "Назначение задачи"
+        verbose_name_plural = "Назначения задач"
+        unique_together = ["user", "task"]
 
     def __str__(self):
         return f"{self.user.username} → {self.task.title}"
@@ -115,15 +127,18 @@ class TaskAssignment(models.Model):
 
 class UserGroup(models.Model):
     """Группа пользователей для массового назначения задач"""
-    name = models.CharField(max_length=100, unique=True, verbose_name='Название группы')
-    description = models.TextField(blank=True, verbose_name='Описание')
-    users = models.ManyToManyField(User, related_name='user_groups', blank=True, verbose_name='Пользователи')
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
+
+    name = models.CharField(max_length=100, unique=True, verbose_name="Название группы")
+    description = models.TextField(blank=True, verbose_name="Описание")
+    users = models.ManyToManyField(
+        User, related_name="user_groups", blank=True, verbose_name="Пользователи"
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
 
     class Meta:
-        verbose_name = 'Группа пользователей'
-        verbose_name_plural = 'Группы пользователей'
-        ordering = ['name']
+        verbose_name = "Группа пользователей"
+        verbose_name_plural = "Группы пользователей"
+        ordering = ["name"]
 
     def __str__(self):
         return f"{self.name} ({self.users.count()} пользователей)"
@@ -131,19 +146,27 @@ class UserGroup(models.Model):
 
 class BattleSettings(models.Model):
     """Настройки баттла (синглтон)"""
+
+    # 🔥 ИСПРАВЛЕНО: Используем настоящий datetime объект вместо строки
     battle_start = models.DateTimeField(
-        default='2026-09-15T10:00:00Z',
-        verbose_name='Начало баттла'
+        default=timezone.make_aware(datetime(2026, 9, 15, 10, 0, 0)),
+        verbose_name="Начало баттла",
     )
+
+    # 🔥 ДОБАВЛЕНО: Поле конца баттла (критически важно для фронтенда)
+    battle_end = models.DateTimeField(
+        default=timezone.make_aware(datetime(2026, 9, 15, 12, 0, 0)),
+        verbose_name="Конец баттла",
+    )
+
     round_duration_minutes = models.IntegerField(
-        default=120,
-        verbose_name='Длительность раунда (минуты)'
+        default=120, verbose_name="Длительность раунда (минуты)"
     )
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Обновлено")
 
     class Meta:
-        verbose_name = 'Настройки баттла'
-        verbose_name_plural = 'Настройки баттла'
+        verbose_name = "Настройки баттла"
+        verbose_name_plural = "Настройки баттла"
 
     def __str__(self):
         return f"Настройки баттла (обновлено: {self.updated_at})"
@@ -151,11 +174,8 @@ class BattleSettings(models.Model):
     @classmethod
     def get_settings(cls):
         """Получить или создать настройки (синглтон)"""
+        # 🔥 ИСПРАВЛЕНО: Убрали строку из defaults, пусть берет из default поля модели
         settings, created = cls.objects.get_or_create(
-            id=1,
-            defaults={
-                'battle_start': '2026-09-15T10:00:00Z',
-                'round_duration_minutes': 120
-            }
+            id=1, defaults={"round_duration_minutes": 120}
         )
         return settings

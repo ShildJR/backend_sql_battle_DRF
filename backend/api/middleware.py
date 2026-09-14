@@ -11,7 +11,7 @@ def get_user_from_token(token_str):
     """Получает пользователя из JWT-токена"""
     try:
         token = AccessToken(token_str)
-        user_id = token['user_id']
+        user_id = token["user_id"]
         user = User.objects.get(id=user_id)
         return user
     except Exception:
@@ -21,23 +21,23 @@ def get_user_from_token(token_str):
 class QueryAuthMiddleware(BaseMiddleware):
     """
     Middleware для аутентификации WebSocket через query-параметр ?token=...
-
-    Фронтенд не может отправлять заголовки через WebSocket, поэтому токен
-    передаётся в URL: ws://localhost:8000/ws/leaderboard?token=eyJ...
     """
 
     async def __call__(self, scope, receive, send):
-        # Извлекаем query string
-        query_string = scope.get('query_string', b'').decode('utf-8')
-        query_params = parse_qs(query_string)
+        query_string = scope.get("query_string", b"").decode("utf-8")
+        print(f"🔍 [WS Middleware] Raw query string: '{query_string}'")
 
-        # Получаем токен из query-параметра
-        token_list = query_params.get('token', [])
+        query_params = parse_qs(query_string)
+        token_list = query_params.get("token", [])
         token_str = token_list[0] if token_list else None
 
+        print(
+            f"🔑 [WS Middleware] Извлеченный токен: {'ЕСТЬ' if token_str else 'ОТСУТСТВУЕТ'}"
+        )
+
         if token_str:
-            scope['user'] = await get_user_from_token(token_str)
+            scope["user"] = await get_user_from_token(token_str)
         else:
-            scope['user'] = AnonymousUser()
+            scope["user"] = AnonymousUser()
 
         return await super().__call__(scope, receive, send)

@@ -4,9 +4,19 @@ import os
 import re
 from typing import Tuple, List, Dict, Any
 
-
 # Запрещённые ключевые слова (только SELECT разрешён)
-FORBIDDEN_KEYWORDS = ['INSERT', 'UPDATE', 'DELETE', 'DROP', 'ALTER', 'TRUNCATE', 'CREATE', 'EXEC', 'GRANT', 'REVOKE']
+FORBIDDEN_KEYWORDS = [
+    "INSERT",
+    "UPDATE",
+    "DELETE",
+    "DROP",
+    "ALTER",
+    "TRUNCATE",
+    "CREATE",
+    "EXEC",
+    "GRANT",
+    "REVOKE",
+]
 
 
 def validate_query(query: str) -> bool:
@@ -20,7 +30,7 @@ def validate_query(query: str) -> bool:
     # Проверяем запрещённые ключевые слова
     for keyword in FORBIDDEN_KEYWORDS:
         # Используем word boundary чтобы не ловить подстроки
-        pattern = r'\b' + keyword + r'\b'
+        pattern = r"\b" + keyword + r"\b"
         if re.search(pattern, query_upper):
             return False
 
@@ -28,9 +38,7 @@ def validate_query(query: str) -> bool:
 
 
 def execute_sql_sandbox(
-    query: str,
-    schema: str,
-    tables_data: List[Dict[str, Any]]
+    query: str, schema: str, tables_data: List[Dict[str, Any]]
 ) -> Tuple[bool, Any]:
     """
     Выполняет SQL-запрос в изолированной среде (sandbox).
@@ -50,7 +58,7 @@ def execute_sql_sandbox(
 
     try:
         # Создаём временную БД
-        tmp_file = tempfile.NamedTemporaryFile(suffix='.db', delete=False)
+        tmp_file = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
         tmp_file.close()
 
         conn = sqlite3.connect(tmp_file.name)
@@ -64,14 +72,14 @@ def execute_sql_sandbox(
 
         # Загружаем тестовые данные
         for table_info in tables_data:
-            table_name = table_info.get('name', '')
-            columns = table_info.get('columns', [])
-            sample_data = table_info.get('sampleData', [])
+            table_name = table_info.get("name", "")
+            columns = table_info.get("columns", [])
+            sample_data = table_info.get("sampleData", [])
 
             if not table_name or not columns:
                 continue
 
-            col_names = [col['name'] for col in columns]
+            col_names = [col["name"] for col in columns]
 
             for row in sample_data:
                 values = []
@@ -79,7 +87,7 @@ def execute_sql_sandbox(
                 for col_name in col_names:
                     val = row.get(col_name)
                     values.append(val)
-                    placeholders.append('?')
+                    placeholders.append("?")
 
                 try:
                     insert_sql = f"INSERT INTO {table_name} ({', '.join(col_names)}) VALUES ({', '.join(placeholders)})"
@@ -132,38 +140,47 @@ def execute_sql_sandbox(
 def compare_results(user_result: List[Dict], expected_result: List[Dict]) -> bool:
     """
     Сравнивает результат пользователя с эталонным.
-
-    Правила:
-    - Количество строк должно совпадать
-    - Названия колонок могут отличаться (алиасы)
-    - Порядок строк не важен
-    - Значения должны совпадать с точностью до типов
+    Устойчива к типам данных (float vs int), порядку строк и JSON-строкам.
     """
-    if not user_result and not expected_result:
-        return True
+    import json
 
+    # 1. Страховка: если данные пришли как JSON-строка, парсим их
+    if isinstance(user_result, str):
+        try:
+            user_result = json.loads(user_result)
+        except:
+            return False
+    if isinstance(expected_result, str):
+        try:
+            expected_result = json.loads(expected_result)
+        except:
+            return False
+
+    # 2. Базовые проверки
+    if not isinstance(user_result, list) or not isinstance(expected_result, list):
+        return False
     if len(user_result) != len(expected_result):
         return False
+    if len(user_result) == 0:
+        return True
 
-    if not user_result or not expected_result:
-        return False
-
-    # Нормализуем значения для сравнения
-    def normalize_value(val):
-        if val is None:
-            return None
-        if isinstance(val, float):
-            return round(val, 6)
-        if isinstance(val, str):
-            return val.strip()
-        return val
-
+    # 3. Функция нормализации одной строки (словаря)
     def normalize_row(row):
-        # Приводим все значения к строке, чтобы избежать ошибок сравнения типов
-        return tuple(sorted(str(v) if v is not None else '' for v in row.values()))
+        normalized = {}
+        for k, v in row.items():
+            if v is None:
+                normalized[k] = None
+            elif isinstance(v, float):
+                normalized[k] = round(v, 4)  # Округляем float
+            elif isinstance(v, str):
+                normalized[k] = v.strip().lower()  # Нормализуем строки
+            else:
+                normalized[k] = v
+        # Возвращаем отсортированный кортеж пар (ключ, значение)
+        return tuple(sorted(normalized.items()))
 
-    # Сортируем строки для сравнения (порядок не важен)
-    user_sorted = sorted(normalize_row(row) for row in user_result)
-    expected_sorted = sorted(normalize_row(row) for row in expected_result)
+    # 4. Сортируем строки и сравниваем
+    user_sorted = sorted([normalize_row(row) for row in user_result])
+    expected_sorted = sorted([normalize_row(row) for row in expected_result])
 
     return user_sorted == expected_sorted
