@@ -132,38 +132,46 @@ def execute_sql_sandbox(
 def compare_results(user_result: List[Dict], expected_result: List[Dict]) -> bool:
     """
     Сравнивает результат пользователя с эталонным.
-
-    Правила:
-    - Количество строк должно совпадать
-    - Названия колонок могут отличаться (алиасы)
-    - Порядок строк не важен
-    - Значения должны совпадать с точностью до типов
+    Устойчива к типам данных (float vs int), порядку строк и JSON-строкам.
     """
-    if not user_result and not expected_result:
-        return True
+    import json
+    
+    # Страховка: если данные пришли как JSON-строка, парсим их
+    if isinstance(user_result, str):
+        try:
+            user_result = json.loads(user_result)
+        except json.JSONDecodeError:
+            return False
+    if isinstance(expected_result, str):
+        try:
+            expected_result = json.loads(expected_result)
+        except json.JSONDecodeError:
+            return False
 
+    # Базовые проверки
+    if not isinstance(user_result, list) or not isinstance(expected_result, list):
+        return False
     if len(user_result) != len(expected_result):
         return False
+    if len(user_result) == 0:
+        return True
 
-    if not user_result or not expected_result:
-        return False
-
-    # Нормализуем значения для сравнения
-    def normalize_value(val):
-        if val is None:
-            return None
-        if isinstance(val, float):
-            return round(val, 6)
-        if isinstance(val, str):
-            return val.strip()
-        return val
-
+    # Нормализация одной строки (словаря)
     def normalize_row(row):
-        # Приводим все значения к строке, чтобы избежать ошибок сравнения типов
-        return tuple(sorted(str(v) if v is not None else '' for v in row.values()))
+        normalized = {}
+        for k, v in row.items():
+            if v is None:
+                normalized[k] = None
+            elif isinstance(v, float):
+                normalized[k] = round(v, 4)  # Округляем float
+            elif isinstance(v, str):
+                normalized[k] = v.strip().lower()  # Нормализуем строки
+            else:
+                normalized[k] = v
+        return tuple(sorted(normalized.items()))
 
-    # Сортируем строки для сравнения (порядок не важен)
-    user_sorted = sorted(normalize_row(row) for row in user_result)
-    expected_sorted = sorted(normalize_row(row) for row in expected_result)
+    # Сортируем строки и сравниваем
+    user_sorted = sorted([normalize_row(row) for row in user_result])
+    expected_sorted = sorted([normalize_row(row) for row in expected_result])
 
     return user_sorted == expected_sorted

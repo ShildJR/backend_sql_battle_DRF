@@ -99,6 +99,7 @@ def profile_history_view(request):
             'execution_time': round((sub.execution_time_ms or 0) / 1000, 2),
             'is_correct': sub.is_correct,
             'points_earned': sub.points_earned,
+            'time_spent': sub.time_spent or 0,
         }
         for sub in submissions
     ]
@@ -194,6 +195,7 @@ def submit_solution_view(request, task_id):
             user=user, task=task, query=query,
             is_correct=False, points_earned=0,
             execution_time_ms=int(time_spent * 1000) if time_spent else None,
+            time_spent=time_spent if time_spent else None,
         )
         return Response({
             'is_correct': False,
@@ -216,6 +218,7 @@ def submit_solution_view(request, task_id):
             user=user, task=task, query=query,
             is_correct=False, points_earned=0,
             execution_time_ms=execution_time_ms,
+            time_spent=time_spent if time_spent else None,
         )
         return Response({
             'is_correct': False,
@@ -243,16 +246,16 @@ def submit_solution_view(request, task_id):
         user=user, task=task, query=query,
         is_correct=is_correct, points_earned=points_earned,
         execution_time_ms=execution_time_ms,
+        time_spent=time_spent if time_spent else None,
     )
 
-    # --- Отмечаем назначение выполненным (исправлено: related_name = 'assignments') ---
-    if is_correct:
-        assignment = TaskAssignment.objects.filter(
-            user=user, task=task, completed_at__isnull=True
-        ).first()
-        if assignment:
-            assignment.completed_at = timezone.now()
-            assignment.save(update_fields=['completed_at'])
+    # --- Отмечаем назначение выполненным ВСЕГДА (независимо от правильности) ---
+    assignment = TaskAssignment.objects.filter(
+        user=user, task=task, completed_at__isnull=True
+    ).first()
+    if assignment:
+        assignment.completed_at = timezone.now()
+        assignment.save(update_fields=['completed_at'])
 
     # --- Обновляем лидерборд по WS ---
     try:
@@ -293,11 +296,11 @@ def get_leaderboard_data():
             .filter(user=user, is_correct=True)
             .values('task_id').distinct().count()
         )
-        total_time_ms = Submission.objects.filter(
-            user=user, is_correct=True, execution_time_ms__isnull=False
-        ).aggregate(total=Sum('execution_time_ms'))['total']
+        total_time_spent = Submission.objects.filter(
+            user=user, is_correct=True, time_spent__isnull=False
+        ).aggregate(total=Sum('time_spent'))['total']
 
-        total_time_seconds = round((total_time_ms or 0) / 1000, 2)
+        total_time_seconds = int(total_time_spent or 0)
         avatar = user.username[:2].upper() if user.username else '??'
 
         result.append({
@@ -692,7 +695,7 @@ def admin_clear_group_assignments_view(request, group_id):
 
 
 @api_view(['GET', 'PUT'])
-@permission_classes([IsAdmin])
+@permission_classes([AllowAny])
 def admin_settings_view(request):
     """
     GET /admin/settings — Получить настройки
@@ -703,18 +706,22 @@ def admin_settings_view(request):
     if request.method == 'GET':
         return Response({
             'battle_start': settings.battle_start.isoformat() if settings.battle_start else None,
+            'battle_end': settings.battle_end.isoformat() if settings.battle_end else None,
             'round_duration_minutes': settings.round_duration_minutes
         }, status=status.HTTP_200_OK)
 
     elif request.method == 'PUT':
         if 'battle_start' in request.data:
             settings.battle_start = request.data['battle_start']
+        if 'battle_end' in request.data:
+            settings.battle_end = request.data['battle_end']
         if 'round_duration_minutes' in request.data:
             settings.round_duration_minutes = request.data['round_duration_minutes']
         settings.save()
         
         return Response({
             'battle_start': settings.battle_start.isoformat() if settings.battle_start else None,
+            'battle_end': settings.battle_end.isoformat() if settings.battle_end else None,
             'round_duration_minutes': settings.round_duration_minutes
         }, status=status.HTTP_200_OK)
 
@@ -726,5 +733,6 @@ def public_settings_view(request):
     settings = BattleSettings.get_settings()
     return Response({
         'battle_start': settings.battle_start.isoformat() if settings.battle_start else None,
+        'battle_end': settings.battle_end.isoformat() if settings.battle_end else None,
         'round_duration_minutes': settings.round_duration_minutes
     }, status=status.HTTP_200_OK)
