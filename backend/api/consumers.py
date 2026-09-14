@@ -10,6 +10,15 @@ class LeaderboardConsumer(AsyncWebSocketConsumer):
     async def connect(self):
         """Подключение клиента"""
         self.group_name = 'leaderboard'
+        
+        # Проверяем аутентификацию
+        user = self.scope.get('user')
+        is_auth = getattr(user, 'is_authenticated', False)
+
+        if not user or not is_auth:
+            await self.close(code=4001)
+            return
+        
         await self.channel_layer.group_add(
             self.group_name,
             self.channel_name
@@ -58,11 +67,11 @@ class LeaderboardConsumer(AsyncWebSocketConsumer):
             ).values('task_id').distinct().count()
 
             # Считаем общее время, потраченное на все правильные решения
-            total_time_ms = Submission.objects.filter(
-                user=user, is_correct=True, execution_time_ms__isnull=False
-            ).aggregate(total=Sum('execution_time_ms'))['total']
+            total_time_spent = Submission.objects.filter(
+                user=user, is_correct=True, time_spent__isnull=False
+            ).aggregate(total=Sum('time_spent'))['total']
 
-            total_time_seconds = round((total_time_ms or 0) / 1000, 2)
+            total_time_seconds = int(total_time_spent or 0)
             avatar = user.username[:2].upper() if user.username else '??'
 
             # camelCase для совместимости с фронтендом

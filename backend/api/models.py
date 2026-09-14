@@ -68,6 +68,7 @@ class Submission(models.Model):
     is_correct = models.BooleanField(default=False, verbose_name='Правильно')
     points_earned = models.IntegerField(default=0, verbose_name='Заработанные баллы')
     execution_time_ms = models.IntegerField(null=True, blank=True, verbose_name='Время выполнения (мс)')
+    time_spent = models.IntegerField(null=True, blank=True, verbose_name='Затраченное время (сек)')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
 
     class Meta:
@@ -131,9 +132,16 @@ class UserGroup(models.Model):
 
 class BattleSettings(models.Model):
     """Настройки баттла (синглтон)"""
+    from django.utils import timezone
+    from datetime import datetime
+    
     battle_start = models.DateTimeField(
-        default='2026-09-15T10:00:00Z',
+        default=timezone.make_aware(datetime(2026, 9, 15, 10, 0, 0)),
         verbose_name='Начало баттла'
+    )
+    battle_end = models.DateTimeField(
+        default=timezone.make_aware(datetime(2026, 9, 15, 12, 0, 0)),
+        verbose_name='Конец баттла'
     )
     round_duration_minutes = models.IntegerField(
         default=120,
@@ -154,7 +162,6 @@ class BattleSettings(models.Model):
         settings, created = cls.objects.get_or_create(
             id=1,
             defaults={
-                'battle_start': '2026-09-15T10:00:00Z',
                 'round_duration_minutes': 120
             }
         )
