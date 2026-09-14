@@ -1,3 +1,4 @@
+import json
 from rest_framework import serializers
 from .models import User, Task, Submission, TaskAssignment, UserGroup
 
@@ -103,6 +104,21 @@ class TaskDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = ['id', 'title', 'description', 'difficulty', 'points', 'schema', 'tables', 'expectedResult']
+    
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # Преобразуем строки в JSON, если нужно
+        if isinstance(data.get('tables'), str):
+            try:
+                data['tables'] = json.loads(data['tables'])
+            except json.JSONDecodeError:
+                pass
+        if isinstance(data.get('expectedResult'), str):
+            try:
+                data['expectedResult'] = json.loads(data['expectedResult'])
+            except json.JSONDecodeError:
+                pass
+        return data
 
 
 class AdminTaskSerializer(serializers.ModelSerializer):
