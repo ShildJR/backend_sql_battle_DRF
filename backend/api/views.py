@@ -1,5 +1,4 @@
 import time
-from datetime import timedelta
 
 from django.db.models import Q, Sum
 from django.utils import timezone
@@ -497,9 +496,7 @@ def admin_assign_task_view(request, user_id):
     except User.DoesNotExist:
         return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
-    now = timezone.now()
-    started_at = now + timedelta(minutes=1)
-    deadline = now + timedelta(hours=24)
+
 
     if "task_ids" in request.data:
         serializer = BulkAssignTasksSerializer(data=request.data)
@@ -521,7 +518,7 @@ def admin_assign_task_view(request, user_id):
             _, created = TaskAssignment.objects.get_or_create(
                 user=user,
                 task=task,
-                defaults={"started_at": started_at, "deadline": deadline},
+                defaults={},
             )
             if created:
                 assigned_count += 1
@@ -548,7 +545,7 @@ def admin_assign_task_view(request, user_id):
     TaskAssignment.objects.get_or_create(
         user=user,
         task=task,
-        defaults={"started_at": started_at, "deadline": deadline},
+        defaults={},
     )
     return Response(
         {"success": True, "message": "Задача назначена"}, status=status.HTTP_200_OK
@@ -753,10 +750,6 @@ def admin_assign_tasks_to_group_view(request, group_id):
             status=status.HTTP_404_NOT_FOUND,
         )
 
-    now = timezone.now()
-    started_at = now + timedelta(minutes=1)
-    deadline = now + timedelta(hours=24)
-
     users = list(group.users.all())
     assigned_count = 0
     for user in users:
@@ -764,7 +757,7 @@ def admin_assign_tasks_to_group_view(request, group_id):
             _, created = TaskAssignment.objects.get_or_create(
                 user=user,
                 task=task,
-                defaults={"started_at": started_at, "deadline": deadline},
+                defaults={},
             )
             if created:
                 assigned_count += 1

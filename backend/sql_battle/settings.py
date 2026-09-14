@@ -8,7 +8,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-dev-key-change-in-pro
 
 DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,10.128.107.116,10.128.240.24,172.20.10.13').split(',')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -131,13 +131,13 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-# CORS
-CORS_ALLOWED_ORIGINS = os.environ.get(
-    'CORS_ALLOWED_ORIGINS',
-    'http://10.0.197.161:3000'
-).split(',')
+# # CORS
+# CORS_ALLOWED_ORIGINS = os.environ.get(
+#     'CORS_ALLOWED_ORIGINS',
+#     'http://10.128.107.116:3000'
+# ).split(',')
 
-CORS_ALLOW_ALL_ORIGINS = DEBUG
+CORS_ALLOW_ALL_ORIGINS = True
 
 # Channels
 CHANNEL_LAYERS = {
