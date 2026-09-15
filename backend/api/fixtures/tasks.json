@@ -3,33 +3,56 @@
     "model": "api.task",
     "pk": 1,
     "fields": {
-      "title": "Найди активных хакеров",
-      "description": "Напишите SQL-запрос, который вернёт список активных пользователей (status = 'active'). Отобразите имя и город пользователя.",
+      "title": "Общая сумма продаж по сотрудникам",
+      "description": "Напишите SQL-запрос, который вернёт общую сумму продаж по каждому сотруднику, у которого есть продажи. Верните поля в порядке: name, total_sales. name — имя сотрудника, total_sales — сумма продаж. Отсортируйте по total_sales по убыванию, затем по name по возрастанию.",
       "difficulty": "easy",
       "points": 100,
-      "schema": "CREATE TABLE users (id INT PRIMARY KEY, name VARCHAR(100), city VARCHAR(50), status VARCHAR(20));",
+      "schema": "CREATE TABLE employees (id INT PRIMARY KEY, name VARCHAR(100)); CREATE TABLE sales (id INT PRIMARY KEY, employee_id INT, amount INT);",
       "tables": [
         {
-          "name": "users",
+          "name": "employees",
           "columns": [
             { "name": "id", "type": "INT" },
-            { "name": "name", "type": "VARCHAR" },
-            { "name": "city", "type": "VARCHAR" },
-            { "name": "status", "type": "VARCHAR" }
+            { "name": "name", "type": "VARCHAR" }
           ],
           "sampleData": [
-            { "id": 1, "name": "Иван Петров", "city": "Москва", "status": "active" },
-            { "id": 2, "name": "Мария Сидорова", "city": "СПб", "status": "inactive" },
-            { "id": 3, "name": "Алексей Козлов", "city": "Москва", "status": "active" },
-            { "id": 4, "name": "Елена Волкова", "city": "Новосибирск", "status": "active" },
-            { "id": 5, "name": "Дмитрий Морозов", "city": "СПб", "status": "inactive" }
+            { "id": 1, "name": "Анна Белова" },
+            { "id": 2, "name": "Борис Краснов" },
+            { "id": 3, "name": "Виктор Зелёнов" },
+            { "id": 4, "name": "Галина Синева" },
+            { "id": 5, "name": "Денис Чёрный" },
+            { "id": 6, "name": "Елена Фиолетова" },
+            { "id": 7, "name": "Жанна Оранжевая" }
+          ]
+        },
+        {
+          "name": "sales",
+          "columns": [
+            { "name": "id", "type": "INT" },
+            { "name": "employee_id", "type": "INT" },
+            { "name": "amount", "type": "INT" }
+          ],
+          "sampleData": [
+            { "id": 1, "employee_id": 1, "amount": 5000 },
+            { "id": 2, "employee_id": 1, "amount": 3000 },
+            { "id": 3, "employee_id": 2, "amount": 7000 },
+            { "id": 4, "employee_id": 3, "amount": 2000 },
+            { "id": 5, "employee_id": 4, "amount": 9000 },
+            { "id": 6, "employee_id": 5, "amount": 4000 },
+            { "id": 7, "employee_id": 2, "amount": 1000 },
+            { "id": 8, "employee_id": 4, "amount": 2000 },
+            { "id": 9, "employee_id": 1, "amount": 1000 },
+            { "id": 10, "employee_id": 6, "amount": 6000 }
           ]
         }
       ],
       "expected_result": [
-        { "name": "Иван Петров", "city": "Москва" },
-        { "name": "Алексей Козлов", "city": "Москва" },
-        { "name": "Елена Волкова", "city": "Новосибирск" }
+        { "name": "Галина Синева", "total_sales": 11000 },
+        { "name": "Анна Белова", "total_sales": 9000 },
+        { "name": "Борис Краснов", "total_sales": 8000 },
+        { "name": "Елена Фиолетова", "total_sales": 6000 },
+        { "name": "Денис Чёрный", "total_sales": 4000 },
+        { "name": "Виктор Зелёнов", "total_sales": 2000 }
       ],
       "created_at": "2026-01-01T10:00:00Z"
     }
@@ -38,33 +61,65 @@
     "model": "api.task",
     "pk": 2,
     "fields": {
-      "title": "Подсчёт пользователей по городам",
-      "description": "Напишите SQL-запрос, который подсчитает количество пользователей в каждом городе. Результат должен содержать название города и количество пользователей. в формате city | user_count",
+      "title": "Сумма продаж по отделам",
+      "description": "Напишите SQL-запрос, который вернёт общую сумму продаж по каждому отделу. Верните поля в порядке: department, total_sales. department — название отдела, total_sales — сумма продаж. Отсортируйте по total_sales по убыванию, затем по department по возрастанию.",
       "difficulty": "easy",
       "points": 150,
-      "schema": "CREATE TABLE users (id INT PRIMARY KEY, name VARCHAR(100), city VARCHAR(50));",
+      "schema": "CREATE TABLE departments (id INT PRIMARY KEY, name VARCHAR(100)); CREATE TABLE employees (id INT PRIMARY KEY, name VARCHAR(100), department_id INT); CREATE TABLE sales (id INT PRIMARY KEY, employee_id INT, amount INT);",
       "tables": [
         {
-          "name": "users",
+          "name": "departments",
+          "columns": [
+            { "name": "id", "type": "INT" },
+            { "name": "name", "type": "VARCHAR" }
+          ],
+          "sampleData": [
+            { "id": 1, "name": "Продажи" },
+            { "id": 2, "name": "Маркетинг" },
+            { "id": 3, "name": "Поддержка" }
+          ]
+        },
+        {
+          "name": "employees",
           "columns": [
             { "name": "id", "type": "INT" },
             { "name": "name", "type": "VARCHAR" },
-            { "name": "city", "type": "VARCHAR" }
+            { "name": "department_id", "type": "INT" }
           ],
           "sampleData": [
-            { "id": 1, "name": "Иван Петров", "city": "Москва" },
-            { "id": 2, "name": "Мария Сидорова", "city": "СПб" },
-            { "id": 3, "name": "Алексей Козлов", "city": "Москва" },
-            { "id": 4, "name": "Елена Волкова", "city": "Новосибирск" },
-            { "id": 5, "name": "Дмитрий Морозов", "city": "СПб" },
-            { "id": 6, "name": "Ольга Новикова", "city": "Москва" }
+            { "id": 1, "name": "Анна Белова", "department_id": 1 },
+            { "id": 2, "name": "Борис Краснов", "department_id": 1 },
+            { "id": 3, "name": "Виктор Зелёнов", "department_id": 1 },
+            { "id": 4, "name": "Галина Синева", "department_id": 2 },
+            { "id": 5, "name": "Денис Чёрный", "department_id": 3 },
+            { "id": 6, "name": "Елена Фиолетова", "department_id": 1 }
+          ]
+        },
+        {
+          "name": "sales",
+          "columns": [
+            { "name": "id", "type": "INT" },
+            { "name": "employee_id", "type": "INT" },
+            { "name": "amount", "type": "INT" }
+          ],
+          "sampleData": [
+            { "id": 1, "employee_id": 1, "amount": 5000 },
+            { "id": 2, "employee_id": 1, "amount": 3000 },
+            { "id": 3, "employee_id": 2, "amount": 7000 },
+            { "id": 4, "employee_id": 3, "amount": 2000 },
+            { "id": 5, "employee_id": 4, "amount": 9000 },
+            { "id": 6, "employee_id": 5, "amount": 4000 },
+            { "id": 7, "employee_id": 2, "amount": 1000 },
+            { "id": 8, "employee_id": 4, "amount": 2000 },
+            { "id": 9, "employee_id": 1, "amount": 1000 },
+            { "id": 10, "employee_id": 6, "amount": 6000 }
           ]
         }
       ],
       "expected_result": [
-        { "city": "Москва", "user_count": 3 },
-        { "city": "СПб", "user_count": 2 },
-        { "city": "Новосибирск", "user_count": 1 }
+        { "department": "Продажи", "total_sales": 25000 },
+        { "department": "Маркетинг", "total_sales": 11000 },
+        { "department": "Поддержка", "total_sales": 4000 }
       ],
       "created_at": "2026-01-01T10:00:00Z"
     }
@@ -73,43 +128,52 @@
     "model": "api.task",
     "pk": 3,
     "fields": {
-      "title": "Анализ заказов клиентов",
-      "description": "Напишите SQL-запрос, который вернёт имя клиента и общую сумму его заказов. Включите только клиентов с суммой заказов больше 1000.",
+      "title": "Топ-3 сотрудника по продажам",
+      "description": "Напишите SQL-запрос, который вернёт топ-3 сотрудников по общей сумме продаж. Верните поля в порядке: name, total_sales. name — имя сотрудника, total_sales — сумма продаж. Отсортируйте по total_sales по убыванию, затем по name по возрастанию. Ограничьте результат 3 строками.",
       "difficulty": "medium",
-      "points": 300,
-      "schema": "CREATE TABLE clients (id INT PRIMARY KEY, name VARCHAR(100)); CREATE TABLE orders (id INT PRIMARY KEY, client_id INT, amount INT);",
+      "points": 200,
+      "schema": "CREATE TABLE employees (id INT PRIMARY KEY, name VARCHAR(100)); CREATE TABLE sales (id INT PRIMARY KEY, employee_id INT, amount INT);",
       "tables": [
         {
-          "name": "clients",
+          "name": "employees",
           "columns": [
             { "name": "id", "type": "INT" },
             { "name": "name", "type": "VARCHAR" }
           ],
           "sampleData": [
-            { "id": 1, "name": "ООО Ромашка" },
-            { "id": 2, "name": "ИП Иванов" },
-            { "id": 3, "name": "АО Звезда" }
+            { "id": 1, "name": "Анна Белова" },
+            { "id": 2, "name": "Борис Краснов" },
+            { "id": 3, "name": "Виктор Зелёнов" },
+            { "id": 4, "name": "Галина Синева" },
+            { "id": 5, "name": "Денис Чёрный" },
+            { "id": 6, "name": "Елена Фиолетова" }
           ]
         },
         {
-          "name": "orders",
+          "name": "sales",
           "columns": [
             { "name": "id", "type": "INT" },
-            { "name": "client_id", "type": "INT" },
+            { "name": "employee_id", "type": "INT" },
             { "name": "amount", "type": "INT" }
           ],
           "sampleData": [
-            { "id": 1, "client_id": 1, "amount": 500 },
-            { "id": 2, "client_id": 1, "amount": 800 },
-            { "id": 3, "client_id": 2, "amount": 200 },
-            { "id": 4, "client_id": 2, "amount": 300 },
-            { "id": 5, "client_id": 3, "amount": 1500 }
+            { "id": 1, "employee_id": 1, "amount": 5000 },
+            { "id": 2, "employee_id": 1, "amount": 3000 },
+            { "id": 3, "employee_id": 2, "amount": 7000 },
+            { "id": 4, "employee_id": 3, "amount": 2000 },
+            { "id": 5, "employee_id": 4, "amount": 9000 },
+            { "id": 6, "employee_id": 5, "amount": 4000 },
+            { "id": 7, "employee_id": 2, "amount": 1000 },
+            { "id": 8, "employee_id": 4, "amount": 2000 },
+            { "id": 9, "employee_id": 1, "amount": 1000 },
+            { "id": 10, "employee_id": 6, "amount": 6000 }
           ]
         }
       ],
       "expected_result": [
-        { "name": "ООО Ромашка", "total_amount": 1300 },
-        { "name": "АО Звезда", "total_amount": 1500 }
+        { "name": "Галина Синева", "total_sales": 11000 },
+        { "name": "Анна Белова", "total_sales": 9000 },
+        { "name": "Борис Краснов", "total_sales": 8000 }
       ],
       "created_at": "2026-01-01T10:00:00Z"
     }
@@ -118,25 +182,26 @@
     "model": "api.task",
     "pk": 4,
     "fields": {
-      "title": "Топ-3 сотрудника по продажам",
-      "description": "Напишите SQL-запрос, который вернёт топ-3 сотрудников по общей сумме продаж. Результат должен содержать имя сотрудника и сумму продаж, отсортированные по убыванию.",
-      "difficulty": "hard",
-      "points": 500,
-      "schema": "CREATE TABLE employees (id INT PRIMARY KEY, name VARCHAR(100), department VARCHAR(50)); CREATE TABLE sales (id INT PRIMARY KEY, employee_id INT, amount INT, sale_date VARCHAR(20));",
+      "title": "Сотрудники без продаж",
+      "description": "Напишите SQL-запрос, который вернёт имена сотрудников, у которых нет ни одной продажи. Верните одно поле в порядке: name. Отсортируйте по name по возрастанию.",
+      "difficulty": "medium",
+      "points": 250,
+      "schema": "CREATE TABLE employees (id INT PRIMARY KEY, name VARCHAR(100)); CREATE TABLE sales (id INT PRIMARY KEY, employee_id INT, amount INT);",
       "tables": [
         {
           "name": "employees",
           "columns": [
             { "name": "id", "type": "INT" },
-            { "name": "name", "type": "VARCHAR" },
-            { "name": "department", "type": "VARCHAR" }
+            { "name": "name", "type": "VARCHAR" }
           ],
           "sampleData": [
-            { "id": 1, "name": "Анна Белова", "department": "Продажи" },
-            { "id": 2, "name": "Борис Краснов", "department": "Продажи" },
-            { "id": 3, "name": "Виктор Зелёнов", "department": "Продажи" },
-            { "id": 4, "name": "Галина Синева", "department": "Продажи" },
-            { "id": 5, "name": "Денис Чёрный", "department": "Продажи" }
+            { "id": 1, "name": "Анна Белова" },
+            { "id": 2, "name": "Борис Краснов" },
+            { "id": 3, "name": "Виктор Зелёнов" },
+            { "id": 4, "name": "Галина Синева" },
+            { "id": 5, "name": "Денис Чёрный" },
+            { "id": 6, "name": "Елена Фиолетова" },
+            { "id": 7, "name": "Жанна Оранжевая" }
           ]
         },
         {
@@ -144,25 +209,328 @@
           "columns": [
             { "name": "id", "type": "INT" },
             { "name": "employee_id", "type": "INT" },
-            { "name": "amount", "type": "INT" },
-            { "name": "sale_date", "type": "VARCHAR" }
+            { "name": "amount", "type": "INT" }
           ],
           "sampleData": [
-            { "id": 1, "employee_id": 1, "amount": 5000, "sale_date": "2024-01-15" },
-            { "id": 2, "employee_id": 1, "amount": 3000, "sale_date": "2024-01-20" },
-            { "id": 3, "employee_id": 2, "amount": 7000, "sale_date": "2024-01-10" },
-            { "id": 4, "employee_id": 3, "amount": 2000, "sale_date": "2024-01-12" },
-            { "id": 5, "employee_id": 4, "amount": 9000, "sale_date": "2024-01-18" },
-            { "id": 6, "employee_id": 5, "amount": 4000, "sale_date": "2024-01-25" },
-            { "id": 7, "employee_id": 2, "amount": 1000, "sale_date": "2024-01-28" },
-            { "id": 8, "employee_id": 4, "amount": 2000, "sale_date": "2024-01-30" }
+            { "id": 1, "employee_id": 1, "amount": 5000 },
+            { "id": 2, "employee_id": 1, "amount": 3000 },
+            { "id": 3, "employee_id": 2, "amount": 7000 },
+            { "id": 4, "employee_id": 3, "amount": 2000 },
+            { "id": 5, "employee_id": 4, "amount": 9000 },
+            { "id": 6, "employee_id": 5, "amount": 4000 },
+            { "id": 7, "employee_id": 2, "amount": 1000 },
+            { "id": 8, "employee_id": 4, "amount": 2000 },
+            { "id": 9, "employee_id": 1, "amount": 1000 },
+            { "id": 10, "employee_id": 6, "amount": 6000 }
           ]
         }
       ],
       "expected_result": [
-        { "name": "Галина Синева", "total_sales": 11000 },
-        { "name": "Борис Краснов", "total_sales": 8000 },
-        { "name": "Анна Белова", "total_sales": 8000 }
+        { "name": "Жанна Оранжевая" }
+      ],
+      "created_at": "2026-01-01T10:00:00Z"
+    }
+  },
+  {
+    "model": "api.task",
+    "pk": 5,
+    "fields": {
+      "title": "Количество продаж по сотрудникам",
+      "description": "Напишите SQL-запрос, который вернёт количество продаж по каждому сотруднику, у которого есть продажи. Верните поля в порядке: name, sales_count. name — имя сотрудника, sales_count — количество записей в таблице sales. Отсортируйте по sales_count по убыванию, затем по name по возрастанию.",
+      "difficulty": "medium",
+      "points": 300,
+      "schema": "CREATE TABLE employees (id INT PRIMARY KEY, name VARCHAR(100)); CREATE TABLE sales (id INT PRIMARY KEY, employee_id INT, amount INT);",
+      "tables": [
+        {
+          "name": "employees",
+          "columns": [
+            { "name": "id", "type": "INT" },
+            { "name": "name", "type": "VARCHAR" }
+          ],
+          "sampleData": [
+            { "id": 1, "name": "Анна Белова" },
+            { "id": 2, "name": "Борис Краснов" },
+            { "id": 3, "name": "Виктор Зелёнов" },
+            { "id": 4, "name": "Галина Синева" },
+            { "id": 5, "name": "Денис Чёрный" },
+            { "id": 6, "name": "Елена Фиолетова" }
+          ]
+        },
+        {
+          "name": "sales",
+          "columns": [
+            { "name": "id", "type": "INT" },
+            { "name": "employee_id", "type": "INT" },
+            { "name": "amount", "type": "INT" }
+          ],
+          "sampleData": [
+            { "id": 1, "employee_id": 1, "amount": 5000 },
+            { "id": 2, "employee_id": 1, "amount": 3000 },
+            { "id": 3, "employee_id": 2, "amount": 7000 },
+            { "id": 4, "employee_id": 3, "amount": 2000 },
+            { "id": 5, "employee_id": 4, "amount": 9000 },
+            { "id": 6, "employee_id": 5, "amount": 4000 },
+            { "id": 7, "employee_id": 2, "amount": 1000 },
+            { "id": 8, "employee_id": 4, "amount": 2000 },
+            { "id": 9, "employee_id": 1, "amount": 1000 },
+            { "id": 10, "employee_id": 6, "amount": 6000 }
+          ]
+        }
+      ],
+      "expected_result": [
+        { "name": "Анна Белова", "sales_count": 3 },
+        { "name": "Борис Краснов", "sales_count": 2 },
+        { "name": "Галина Синева", "sales_count": 2 },
+        { "name": "Виктор Зелёнов", "sales_count": 1 },
+        { "name": "Денис Чёрный", "sales_count": 1 },
+        { "name": "Елена Фиолетова", "sales_count": 1 }
+      ],
+      "created_at": "2026-01-01T10:00:00Z"
+    }
+  },
+  {
+    "model": "api.task",
+    "pk": 6,
+    "fields": {
+      "title": "Количество проданных товаров по категориям",
+      "description": "Напишите SQL-запрос, который вернёт суммарное количество проданных товаров по каждой категории. Верните поля в порядке: category, total_quantity. category — название категории, total_quantity — сумма quantity из sale_items. Отсортируйте по total_quantity по убыванию, затем по category по возрастанию.",
+      "difficulty": "hard",
+      "points": 400,
+      "schema": "CREATE TABLE categories (id INT PRIMARY KEY, name VARCHAR(100)); CREATE TABLE products (id INT PRIMARY KEY, name VARCHAR(100), category_id INT); CREATE TABLE sale_items (id INT PRIMARY KEY, sale_id INT, product_id INT, quantity INT);",
+      "tables": [
+        {
+          "name": "categories",
+          "columns": [
+            { "name": "id", "type": "INT" },
+            { "name": "name", "type": "VARCHAR" }
+          ],
+          "sampleData": [
+            { "id": 1, "name": "Электроника" },
+            { "id": 2, "name": "Обучение" }
+          ]
+        },
+        {
+          "name": "products",
+          "columns": [
+            { "name": "id", "type": "INT" },
+            { "name": "name", "type": "VARCHAR" },
+            { "name": "category_id", "type": "INT" }
+          ],
+          "sampleData": [
+            { "id": 1, "name": "Ноутбук", "category_id": 1 },
+            { "id": 2, "name": "Смартфон", "category_id": 1 },
+            { "id": 3, "name": "Книга", "category_id": 2 },
+            { "id": 4, "name": "Курс", "category_id": 2 },
+            { "id": 5, "name": "Наушники", "category_id": 1 }
+          ]
+        },
+        {
+          "name": "sale_items",
+          "columns": [
+            { "name": "id", "type": "INT" },
+            { "name": "sale_id", "type": "INT" },
+            { "name": "product_id", "type": "INT" },
+            { "name": "quantity", "type": "INT" }
+          ],
+          "sampleData": [
+            { "id": 1, "sale_id": 1, "product_id": 1, "quantity": 1 },
+            { "id": 2, "sale_id": 1, "product_id": 5, "quantity": 2 },
+            { "id": 3, "sale_id": 2, "product_id": 2, "quantity": 1 },
+            { "id": 4, "sale_id": 3, "product_id": 1, "quantity": 1 },
+            { "id": 5, "sale_id": 4, "product_id": 3, "quantity": 3 },
+            { "id": 6, "sale_id": 5, "product_id": 4, "quantity": 1 },
+            { "id": 7, "sale_id": 5, "product_id": 2, "quantity": 2 },
+            { "id": 8, "sale_id": 6, "product_id": 5, "quantity": 1 },
+            { "id": 9, "sale_id": 7, "product_id": 3, "quantity": 1 },
+            { "id": 10, "sale_id": 8, "product_id": 4, "quantity": 2 },
+            { "id": 11, "sale_id": 9, "product_id": 1, "quantity": 1 },
+            { "id": 12, "sale_id": 10, "product_id": 2, "quantity": 3 }
+          ]
+        }
+      ],
+      "expected_result": [
+        { "category": "Электроника", "total_quantity": 12 },
+        { "category": "Обучение", "total_quantity": 7 }
+      ],
+      "created_at": "2026-01-01T10:00:00Z"
+    }
+  },
+  {
+    "model": "api.task",
+    "pk": 7,
+    "fields": {
+      "title": "Топ-2 сотрудника по уникальным товарам",
+      "description": "Напишите SQL-запрос, который вернёт топ-2 сотрудников по количеству различных товаров, которые они продали. Верните поля в порядке: name, product_count. name — имя сотрудника, product_count — количество уникальных product_id. Отсортируйте по product_count по убыванию, затем по name по возрастанию. Ограничьте результат 2 строками.",
+      "difficulty": "hard",
+      "points": 450,
+      "schema": "CREATE TABLE employees (id INT PRIMARY KEY, name VARCHAR(100)); CREATE TABLE sales (id INT PRIMARY KEY, employee_id INT, amount INT); CREATE TABLE sale_items (id INT PRIMARY KEY, sale_id INT, product_id INT, quantity INT);",
+      "tables": [
+        {
+          "name": "employees",
+          "columns": [
+            { "name": "id", "type": "INT" },
+            { "name": "name", "type": "VARCHAR" }
+          ],
+          "sampleData": [
+            { "id": 1, "name": "Анна Белова" },
+            { "id": 2, "name": "Борис Краснов" },
+            { "id": 3, "name": "Виктор Зелёнов" },
+            { "id": 4, "name": "Галина Синева" },
+            { "id": 5, "name": "Денис Чёрный" },
+            { "id": 6, "name": "Елена Фиолетова" }
+          ]
+        },
+        {
+          "name": "sales",
+          "columns": [
+            { "name": "id", "type": "INT" },
+            { "name": "employee_id", "type": "INT" },
+            { "name": "amount", "type": "INT" }
+          ],
+          "sampleData": [
+            { "id": 1, "employee_id": 1, "amount": 5000 },
+            { "id": 2, "employee_id": 1, "amount": 3000 },
+            { "id": 3, "employee_id": 2, "amount": 7000 },
+            { "id": 4, "employee_id": 3, "amount": 2000 },
+            { "id": 5, "employee_id": 4, "amount": 9000 },
+            { "id": 6, "employee_id": 5, "amount": 4000 },
+            { "id": 7, "employee_id": 2, "amount": 1000 },
+            { "id": 8, "employee_id": 4, "amount": 2000 },
+            { "id": 9, "employee_id": 1, "amount": 1000 },
+            { "id": 10, "employee_id": 6, "amount": 6000 }
+          ]
+        },
+        {
+          "name": "sale_items",
+          "columns": [
+            { "name": "id", "type": "INT" },
+            { "name": "sale_id", "type": "INT" },
+            { "name": "product_id", "type": "INT" },
+            { "name": "quantity", "type": "INT" }
+          ],
+          "sampleData": [
+            { "id": 1, "sale_id": 1, "product_id": 1, "quantity": 1 },
+            { "id": 2, "sale_id": 1, "product_id": 5, "quantity": 2 },
+            { "id": 3, "sale_id": 2, "product_id": 2, "quantity": 1 },
+            { "id": 4, "sale_id": 3, "product_id": 1, "quantity": 1 },
+            { "id": 5, "sale_id": 4, "product_id": 3, "quantity": 3 },
+            { "id": 6, "sale_id": 5, "product_id": 4, "quantity": 1 },
+            { "id": 7, "sale_id": 5, "product_id": 2, "quantity": 2 },
+            { "id": 8, "sale_id": 6, "product_id": 5, "quantity": 1 },
+            { "id": 9, "sale_id": 7, "product_id": 3, "quantity": 1 },
+            { "id": 10, "sale_id": 8, "product_id": 4, "quantity": 2 },
+            { "id": 11, "sale_id": 9, "product_id": 1, "quantity": 1 },
+            { "id": 12, "sale_id": 10, "product_id": 2, "quantity": 3 }
+          ]
+        }
+      ],
+      "expected_result": [
+        { "name": "Анна Белова", "product_count": 3 },
+        { "name": "Борис Краснов", "product_count": 2 }
+      ],
+      "created_at": "2026-01-01T10:00:00Z"
+    }
+  },
+  {
+    "model": "api.task",
+    "pk": 8,
+    "fields": {
+      "title": "Топ-3 сотрудника по выручке в категории «Электроника»",
+      "description": "Напишите SQL-запрос, который вернёт топ-3 сотрудников по выручке от продаж товаров категории «Электроника». Выручка = SUM(sale_items.quantity * products.price). Верните поля в порядке: name, category_revenue. name — имя сотрудника, category_revenue — сумма выручки. Отсортируйте по category_revenue по убыванию, затем по name по возрастанию. Ограничьте результат 3 строками.",
+      "difficulty": "hard",
+      "points": 500,
+      "schema": "CREATE TABLE categories (id INT PRIMARY KEY, name VARCHAR(100)); CREATE TABLE products (id INT PRIMARY KEY, name VARCHAR(100), category_id INT, price INT); CREATE TABLE sale_items (id INT PRIMARY KEY, sale_id INT, product_id INT, quantity INT); CREATE TABLE sales (id INT PRIMARY KEY, employee_id INT, amount INT); CREATE TABLE employees (id INT PRIMARY KEY, name VARCHAR(100));",
+      "tables": [
+        {
+          "name": "categories",
+          "columns": [
+            { "name": "id", "type": "INT" },
+            { "name": "name", "type": "VARCHAR" }
+          ],
+          "sampleData": [
+            { "id": 1, "name": "Электроника" },
+            { "id": 2, "name": "Обучение" }
+          ]
+        },
+        {
+          "name": "products",
+          "columns": [
+            { "name": "id", "type": "INT" },
+            { "name": "name", "type": "VARCHAR" },
+            { "name": "category_id", "type": "INT" },
+            { "name": "price", "type": "INT" }
+          ],
+          "sampleData": [
+            { "id": 1, "name": "Ноутбук", "category_id": 1, "price": 50000 },
+            { "id": 2, "name": "Смартфон", "category_id": 1, "price": 30000 },
+            { "id": 3, "name": "Книга", "category_id": 2, "price": 1000 },
+            { "id": 4, "name": "Курс", "category_id": 2, "price": 20000 },
+            { "id": 5, "name": "Наушники", "category_id": 1, "price": 5000 }
+          ]
+        },
+        {
+          "name": "sale_items",
+          "columns": [
+            { "name": "id", "type": "INT" },
+            { "name": "sale_id", "type": "INT" },
+            { "name": "product_id", "type": "INT" },
+            { "name": "quantity", "type": "INT" }
+          ],
+          "sampleData": [
+            { "id": 1, "sale_id": 1, "product_id": 1, "quantity": 1 },
+            { "id": 2, "sale_id": 1, "product_id": 5, "quantity": 2 },
+            { "id": 3, "sale_id": 2, "product_id": 2, "quantity": 1 },
+            { "id": 4, "sale_id": 3, "product_id": 1, "quantity": 1 },
+            { "id": 5, "sale_id": 4, "product_id": 3, "quantity": 3 },
+            { "id": 6, "sale_id": 5, "product_id": 4, "quantity": 1 },
+            { "id": 7, "sale_id": 5, "product_id": 2, "quantity": 2 },
+            { "id": 8, "sale_id": 6, "product_id": 5, "quantity": 1 },
+            { "id": 9, "sale_id": 7, "product_id": 3, "quantity": 1 },
+            { "id": 10, "sale_id": 8, "product_id": 4, "quantity": 2 },
+            { "id": 11, "sale_id": 9, "product_id": 1, "quantity": 1 },
+            { "id": 12, "sale_id": 10, "product_id": 2, "quantity": 3 }
+          ]
+        },
+        {
+          "name": "sales",
+          "columns": [
+            { "name": "id", "type": "INT" },
+            { "name": "employee_id", "type": "INT" },
+            { "name": "amount", "type": "INT" }
+          ],
+          "sampleData": [
+            { "id": 1, "employee_id": 1, "amount": 5000 },
+            { "id": 2, "employee_id": 1, "amount": 3000 },
+            { "id": 3, "employee_id": 2, "amount": 7000 },
+            { "id": 4, "employee_id": 3, "amount": 2000 },
+            { "id": 5, "employee_id": 4, "amount": 9000 },
+            { "id": 6, "employee_id": 5, "amount": 4000 },
+            { "id": 7, "employee_id": 2, "amount": 1000 },
+            { "id": 8, "employee_id": 4, "amount": 2000 },
+            { "id": 9, "employee_id": 1, "amount": 1000 },
+            { "id": 10, "employee_id": 6, "amount": 6000 }
+          ]
+        },
+        {
+          "name": "employees",
+          "columns": [
+            { "name": "id", "type": "INT" },
+            { "name": "name", "type": "VARCHAR" }
+          ],
+          "sampleData": [
+            { "id": 1, "name": "Анна Белова" },
+            { "id": 2, "name": "Борис Краснов" },
+            { "id": 3, "name": "Виктор Зелёнов" },
+            { "id": 4, "name": "Галина Синева" },
+            { "id": 5, "name": "Денис Чёрный" },
+            { "id": 6, "name": "Елена Фиолетова" }
+          ]
+        }
+      ],
+      "expected_result": [
+        { "name": "Анна Белова", "category_revenue": 140000 },
+        { "name": "Елена Фиолетова", "category_revenue": 90000 },
+        { "name": "Галина Синева", "category_revenue": 60000 }
       ],
       "created_at": "2026-01-01T10:00:00Z"
     }
