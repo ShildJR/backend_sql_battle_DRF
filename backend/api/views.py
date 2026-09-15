@@ -31,6 +31,7 @@ from .serializers import (
 from .permissions import IsAdmin
 from .utils import execute_sql_sandbox, validate_query, compare_results
 
+
 # ==========================================
 # JWT
 # ==========================================
@@ -350,19 +351,32 @@ def get_leaderboard_data():
         "-total_points"
     )[:50]
 
+
     result = []
     for rank, user in enumerate(users, 1):
-        solved_count = (
-            Submission.objects.filter(user=user, is_correct=True)
-            .values("task_id")
-            .distinct()
-            .count()
-        )
-        total_time_spent = Submission.objects.filter(
-            user=user, is_correct=True, time_spent__isnull=False
-        ).aggregate(total=Sum("time_spent"))["total"]
+        # Получаем все уникальные ID задач, которые пользователь пытался решать
+        attempted_task_ids = Submission.objects.filter(user=user).values_list('task_id', flat=True).distinct()
 
-        total_time_seconds = int(total_time_spent or 0)
+        total_time_seconds = 0
+        solved_count = 0
+
+        for task_id in attempted_task_ids:
+            # Получаем все попытки по конкретной задаче, отсортированные по времени
+            submissions = Submission.objects.filter(user=user, task_id=task_id).order_by('created_at')
+
+            # Ищем первую успешную попытку
+            correct_sub = submissions.filter(is_correct=True).first()
+
+            if correct_sub:
+                # Если решил верно: берем время этой успешной попытки
+                total_time_seconds += (correct_sub.time_spent or 0)
+                solved_count += 1
+            else:
+                # Если так и не решил: берем время ПОСЛЕДНЕЙ попытки
+                last_sub = submissions.last()
+                if last_sub and last_sub.time_spent is not None:
+                    total_time_seconds += last_sub.time_spent
+
         avatar = user.username[:2].upper() if user.username else "??"
 
         result.append(
@@ -373,7 +387,6 @@ def get_leaderboard_data():
                 "solvedTasks": solved_count,
                 "total_time_spent": total_time_seconds,
                 "totalTimeSpent": total_time_seconds,
-                "avgTime": round(total_time_seconds / max(solved_count, 1), 2),
                 "avatar": avatar,
             }
         )
@@ -495,8 +508,6 @@ def admin_assign_task_view(request, user_id):
         user = User.objects.get(id=user_id)
     except User.DoesNotExist:
         return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-
-
 
     if "task_ids" in request.data:
         serializer = BulkAssignTasksSerializer(data=request.data)
